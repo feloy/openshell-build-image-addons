@@ -1,0 +1,136 @@
+#
+# Copyright (C) 2026 Red Hat, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Publish PR images
+
+on:
+  workflow_run:
+    workflows:
+      - pr-check
+    types:
+      - completed
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: publish-pr-${{ github.event.workflow_run.id }}
+  cancel-in-progress: true
+
+jobs:
+  images:
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.event == 'pull_request' }}
+    runs-on: ubuntu-26.04
+    outputs:
+      images: ${{ steps.matrix.outputs.images }}
+    steps:
+      - name: Discover PR image artifacts
+        id: matrix
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          artifacts=$(gh api --paginate --slurp \
+            "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts")
+          images=$(jq -c '[.[].artifacts[]
+            | select(.expired == false)
+            | select(.name | test("^oci-image-[a-z0-9]+([._-][a-z0-9]+)*$"))
+            | {suffix: (.name | ltrimstr("oci-image-")), artifact: .name}]' \
+            <<< "$artifacts")
+          if [[ "$images" == '[]' ]]; then
+            echo "::error::No PR image artifacts found"
+            exit 1
+          fi
+          echo "images=$images" >> "$GITHUB_OUTPUT"
+
+  publish:
+    name: Publish ${{ matrix.image.suffix }}/pr
+    needs: images
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      actions: read
+      packages: write
+      attestations: write
+      id-token: write
+      checks: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.images.outputs.images) }}
+    steps:
+      # Publish image data only; do not check out or execute PR code here.
+      - name: Download PR image
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ matrix.image.artifact }}
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/pr-image
+
+      - name: Set PR image name
+        id: image
+        env:
+          IMAGE_SUFFIX: ${{ matrix.image.suffix }}
+        run: |
+          repository="${GITHUB_REPOSITORY,,}"
+          echo "name=ghcr.io/${repository}-${IMAGE_SUFFIX}/pr" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: redhat-actions/podman-login@50c2d9a331bb67c8fdab99b86455fad05e2e3252 # v2.0
+        with:
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+          registry: ghcr.io
+
+      - name: Publish PR image
+        id: push
+        env:
+          IMAGE_NAME: ${{ steps.image.outputs.name }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          skopeo copy --all --retry-times 3 \
+            --digestfile "${RUNNER_TEMP}/pr-image-digest" \
+            "oci:${RUNNER_TEMP}/pr-image:pr" "docker://${IMAGE_NAME}:${HEAD_SHA}"
+          echo "digest=$(cat "${RUNNER_TEMP}/pr-image-digest")" >> "$GITHUB_OUTPUT"
+          echo "Preview image: \`${IMAGE_NAME}:${HEAD_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Generate artifact attestation
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - name: Publish preview check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          IMAGE_NAME: ${{ steps.image.outputs.name }}
+          IMAGE_SUFFIX: ${{ matrix.image.suffix }}
+        run: |
+          jq -n \
+            --arg name "OCI Preview Image (${IMAGE_SUFFIX})" \
+            --arg sha "$HEAD_SHA" \
+            --arg image "${IMAGE_NAME}:${HEAD_SHA}" \
+            '{name: $name, head_sha: $sha, status: "completed", conclusion: "success",
+              output: {title: "Preview Image", summary: "OCI preview image published.",
+                text: ("```\n" + $image + "\n```")}}' \
+            | gh api "repos/${GITHUB_REPOSITORY}/check-runs" -X POST --input -
