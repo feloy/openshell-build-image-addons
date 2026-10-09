@@ -1,0 +1,118 @@
+#
+# Copyright (C) 2026 Red Hat, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: oci-image
+
+on:
+  workflow_call:
+    inputs:
+      image-suffix:
+        type: string
+        required: true
+        description: Image suffix in the form <agent>-<libc>
+      containerfile:
+        type: string
+        required: true
+        description: Path to the variant's Containerfile
+      context:
+        type: string
+        required: true
+        description: Build context directory
+      push:
+        type: boolean
+        required: false
+        default: false
+        description: Push the image to GHCR and attest it
+
+# Permissions are granted by the caller so PR checks can run read-only.
+jobs:
+  build:
+    name: Build ${{ inputs.image-suffix }} OCI image
+    runs-on: ubuntu-26.04
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set image name
+        id: image
+        env:
+          IMAGE_SUFFIX: ${{ inputs.image-suffix }}
+        run: |
+          repository="${GITHUB_REPOSITORY,,}"
+          echo "name=${repository##*/}-${IMAGE_SUFFIX}" >> "$GITHUB_OUTPUT"
+          echo "registry=ghcr.io/${repository%/*}" >> "$GITHUB_OUTPUT"
+
+      - name: Install QEMU dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-binfmt
+
+      - name: Build image
+        id: build-image
+        uses: redhat-actions/buildah-build@719e3c40d8af9790c23eca13f7daa339f2867034 # v3.1.0
+        with:
+          image: ${{ steps.image.outputs.name }}
+          tags: next ${{ github.sha }}
+          platforms: linux/amd64, linux/arm64
+          containerfiles: ${{ inputs.containerfile }}
+          context: ${{ inputs.context }}
+          oci: true
+
+      - name: Export PR image
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          IMAGE: ${{ steps.build-image.outputs.image }}
+        run: |
+          buildah manifest push --all "${IMAGE}:next" "oci:${RUNNER_TEMP}/pr-image:pr"
+
+      - name: Upload PR image
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: oci-image-${{ inputs.image-suffix }}
+          path: ${{ runner.temp }}/pr-image/
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Log in to GHCR
+        if: ${{ inputs.push }}
+        uses: redhat-actions/podman-login@50c2d9a331bb67c8fdab99b86455fad05e2e3252 # v2.0
+        with:
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+          registry: ghcr.io
+
+      - name: Push to GHCR
+        if: ${{ inputs.push }}
+        id: push-to-ghcr
+        uses: redhat-actions/push-to-registry@94ade333c38ecc0e60e94785125d9a52ca423b37 # v3.0.0
+        with:
+          image: ${{ steps.build-image.outputs.image }}
+          tags: ${{ steps.build-image.outputs.tags }}
+          registry: ${{ steps.image.outputs.registry }}
+
+      - name: Generate artifact attestation
+        if: ${{ inputs.push }}
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.image.outputs.registry }}/${{ steps.image.outputs.name }}
+          subject-digest: ${{ steps.push-to-ghcr.outputs.digest }}
+          push-to-registry: true

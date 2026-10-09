@@ -1,0 +1,57 @@
+#
+# Copyright (C) 2026 Red Hat, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# docker.io/library/alpine:3.24.2
+FROM docker.io/library/alpine@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS builder
+ARG CLAUDE_CODE_VERSION=2.1.286
+ARG BUN_VERSION="bun-v1.4.2"
+ARG CLAUDE_AGENT_ACP_VERSION=v0.85.0
+ARG CLAUDE_AGENT_ACP_SHA=c84845272fe3c55c1f97759f00ee48a1356fccae
+
+ENV HOME=/tmp
+USER root
+RUN apk add --no-cache bash ca-certificates curl git libgcc libstdc++ ripgrep unzip
+RUN set -eux; \
+    curl -fsSL https://bun.com/install | bash -s -- "${BUN_VERSION}"; \
+    install -D -m 0755 "$(readlink -f /tmp/.bun/bin/bun)" /usr/local/bin/bun
+RUN chown -R 65532:65532 /tmp/.bun
+
+USER 65532
+
+RUN mkdir -p /tmp/rootfs
+
+# Install Claude and then copy it inside the root filesystem
+RUN set -eux; \
+    curl -fsSL https://claude.ai/install.sh | bash -s -- "${CLAUDE_CODE_VERSION}"; \
+    install -D -m 0755 "$(readlink -f /tmp/.local/bin/claude)" /tmp/rootfs/usr/local/bin/claude
+
+# Build the ACP wrapper with bun and copy it inside the root filesystem
+
+RUN set -eux; \
+    # clone the ACP tag and check it still points to the expected commit
+    git clone --depth 1 --branch "${CLAUDE_AGENT_ACP_VERSION}" https://github.com/agentclientprotocol/claude-agent-acp /tmp/claude-agent-acp; \
+    test "$(git -C /tmp/claude-agent-acp rev-parse HEAD)" = "${CLAUDE_AGENT_ACP_SHA}"; \
+    cd /tmp/claude-agent-acp; \
+    bun install; \
+    bun build --compile src/index.ts --outfile /tmp/rootfs/usr/local/bin/claude-agent-acp
+
+# Now create our final image with reduced layers
+FROM scratch
+COPY --from=builder /tmp/rootfs/ /
+# Notify the SDK/ACP client where claude binary is located
+ENV CLAUDE_CODE_EXECUTABLE=/usr/local/bin/claude
+ENV PATH=/usr/local/bin
