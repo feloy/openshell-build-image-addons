@@ -15,16 +15,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-name: Discover image variants
-
-env:
-  LIBC_VARIANTS: glibc musl
+name: Discover addon images
 
 on:
   workflow_call:
     outputs:
       images:
-        description: Available image variants as a JSON array
+        description: Available addon images as a JSON array
         value: ${{ jobs.discover.outputs.images }}
 
 jobs:
@@ -42,29 +39,26 @@ jobs:
         id: matrix
         shell: bash
         run: |
-          read -r -a libc_variants <<< "$LIBC_VARIANTS"
           images='[]'
           for agent_dir in agents/*/; do
             [[ -d "$agent_dir" ]] || continue
             context="${agent_dir%/}"
             agent="${context##*/}"
-            for libc in "${libc_variants[@]}"; do
-              containerfile="${context}/Containerfile.${libc}"
-              if [[ ! -f "$containerfile" ]]; then
-                echo "::notice::Skipping ${agent}-${libc}: no Containerfile"
-                continue
-              fi
-              images=$(jq -c \
-                --arg suffix "${agent}-${libc}" \
-                --arg containerfile "$containerfile" \
-                --arg context "$context" \
-                '. + [{suffix: $suffix, containerfile: $containerfile, context: $context}]' \
-                <<< "$images")
-            done
+            containerfile="${context}/Containerfile"
+            if [[ ! -f "$containerfile" ]]; then
+              echo "::notice::Skipping ${agent}: no Containerfile"
+              continue
+            fi
+            images=$(jq -c \
+              --arg suffix "$agent" \
+              --arg containerfile "$containerfile" \
+              --arg context "$context" \
+              '. + [{suffix: $suffix, containerfile: $containerfile, context: $context}]' \
+              <<< "$images")
           done
 
           if [[ "$images" == '[]' ]]; then
-            echo "::error::No supported image Containerfiles found"
+            echo "::error::No addon Containerfiles found"
             exit 1
           fi
           echo "images=$images" >> "$GITHUB_OUTPUT"
