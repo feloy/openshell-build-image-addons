@@ -23,11 +23,11 @@ on:
       image-suffix:
         type: string
         required: true
-        description: Agent name used as the image suffix
+        description: Image suffix in the form <agent>-<libc>
       containerfile:
         type: string
         required: true
-        description: Path to the agent's Containerfile
+        description: Path to the variant's Containerfile
       context:
         type: string
         required: true
