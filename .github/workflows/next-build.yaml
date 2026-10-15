@@ -47,6 +47,6 @@ jobs:
     uses: ./.github/workflows/oci-image.yaml
     with:
       image-suffix: ${{ matrix.image.suffix }}
-      containerfile: ${{ matrix.image.containerfile }}
+      variants: ${{ toJSON(matrix.image.variants) }}
       context: ${{ matrix.image.context }}
       push: true

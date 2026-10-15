@@ -15,13 +15,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-name: Discover addon images
+name: Discover image variants
+
+env:
+  LIBC_VARIANTS: glibc musl
 
 on:
   workflow_call:
     outputs:
       images:
-        description: Available addon images as a JSON array
+        description: Available image variants as a JSON array
         value: ${{ jobs.discover.outputs.images }}
 
 jobs:
@@ -39,26 +42,39 @@ jobs:
         id: matrix
         shell: bash
         run: |
+          read -r -a libc_variants <<< "$LIBC_VARIANTS"
           images='[]'
           for agent_dir in agents/*/; do
             [[ -d "$agent_dir" ]] || continue
             context="${agent_dir%/}"
             agent="${context##*/}"
-            containerfile="${context}/Containerfile"
-            if [[ ! -f "$containerfile" ]]; then
-              echo "::notice::Skipping ${agent}: no Containerfile"
+            variants='[]'
+            for libc in "${libc_variants[@]}"; do
+              containerfile="${context}/Containerfile.${libc}"
+              if [[ ! -f "$containerfile" ]]; then
+                echo "::notice::Skipping ${agent}/${libc}: no Containerfile"
+                continue
+              fi
+              variants=$(jq -c \
+                --arg libc "$libc" \
+                --arg containerfile "$containerfile" \
+                '. + [{libc: $libc, containerfile: $containerfile}]' \
+                <<< "$variants")
+            done
+            if [[ "$variants" == '[]' ]]; then
+              echo "::notice::Skipping ${agent}: no supported Containerfiles"
               continue
             fi
             images=$(jq -c \
               --arg suffix "$agent" \
-              --arg containerfile "$containerfile" \
               --arg context "$context" \
-              '. + [{suffix: $suffix, containerfile: $containerfile, context: $context}]' \
+              --argjson variants "$variants" \
+              '. + [{suffix: $suffix, context: $context, variants: $variants}]' \
               <<< "$images")
           done
 
           if [[ "$images" == '[]' ]]; then
-            echo "::error::No addon Containerfiles found"
+            echo "::error::No supported image Containerfiles found"
             exit 1
           fi
           echo "images=$images" >> "$GITHUB_OUTPUT"

@@ -23,11 +23,11 @@ on:
       image-suffix:
         type: string
         required: true
-        description: Agent name used as the image suffix
-      containerfile:
+        description: Agent image suffix
+      variants:
         type: string
         required: true
-        description: Path to the agent's Containerfile
+        description: JSON array of libc names and Containerfile paths
       context:
         type: string
         required: true
@@ -59,28 +59,27 @@ jobs:
           echo "name=${repository##*/}-${IMAGE_SUFFIX}" >> "$GITHUB_OUTPUT"
           echo "registry=ghcr.io/${repository%/*}" >> "$GITHUB_OUTPUT"
 
-      - name: Install QEMU dependency
+      - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y qemu-user-binfmt
+          sudo apt-get install -y buildah qemu-user-binfmt
 
-      - name: Build image
+      - name: Build OCI index
         id: build-image
-        uses: redhat-actions/buildah-build@719e3c40d8af9790c23eca13f7daa339f2867034 # v3.1.0
-        with:
-          image: ${{ steps.image.outputs.name }}
-          tags: next ${{ github.sha }}
-          platforms: linux/amd64, linux/arm64
-          containerfiles: ${{ inputs.containerfile }}
-          context: ${{ inputs.context }}
-          oci: true
+        env:
+          IMAGE_NAME: ${{ steps.image.outputs.name }}
+          BUILD_CONTEXT: ${{ inputs.context }}
+          VARIANTS_JSON: ${{ inputs.variants }}
+        run: |
+          .github/scripts/build-addon-index.sh
+          echo "image=${IMAGE_NAME}:next" >> "$GITHUB_OUTPUT"
 
       - name: Export PR image
         if: ${{ github.event_name == 'pull_request' }}
         env:
           IMAGE: ${{ steps.build-image.outputs.image }}
         run: |
-          buildah manifest push --all "${IMAGE}:next" "oci:${RUNNER_TEMP}/pr-image:pr"
+          buildah manifest push --all --format oci "$IMAGE" "oci:${RUNNER_TEMP}/pr-image:pr"
 
       - name: Upload PR image
         if: ${{ github.event_name == 'pull_request' }}
@@ -103,11 +102,17 @@ jobs:
       - name: Push to GHCR
         if: ${{ inputs.push }}
         id: push-to-ghcr
-        uses: redhat-actions/push-to-registry@94ade333c38ecc0e60e94785125d9a52ca423b37 # v3.0.0
-        with:
-          image: ${{ steps.build-image.outputs.image }}
-          tags: ${{ steps.build-image.outputs.tags }}
-          registry: ${{ steps.image.outputs.registry }}
+        env:
+          IMAGE: ${{ steps.build-image.outputs.image }}
+          DESTINATION: ${{ steps.image.outputs.registry }}/${{ steps.image.outputs.name }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          buildah manifest push --all --format oci --digestfile "${RUNNER_TEMP}/image-digest" \
+            "$IMAGE" "docker://${DESTINATION}:next"
+          buildah manifest push --all --format oci --digestfile "${RUNNER_TEMP}/sha-image-digest" \
+            "$IMAGE" "docker://${DESTINATION}:${HEAD_SHA}"
+          test "$(cat "${RUNNER_TEMP}/image-digest")" = "$(cat "${RUNNER_TEMP}/sha-image-digest")"
+          echo "digest=$(cat "${RUNNER_TEMP}/image-digest")" >> "$GITHUB_OUTPUT"
 
       - name: Generate artifact attestation
         if: ${{ inputs.push }}
