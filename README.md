@@ -26,10 +26,10 @@ libc; each selected image contains only its own files and environment settings.
 
 ## Inspect the published index
 
-This example uses the Codex PR preview built from commit `52eafc3`:
+This example uses the Codex image published from `main` under the `next` tag:
 
 ```sh
-ADDON_INDEX=ghcr.io/feloy/openshell-build-image-addons-codex/pr:52eafc3950d7032fa6ce345fe5905357ec924e84
+ADDON_INDEX=ghcr.io/feloy/openshell-build-image-addons-codex:next
 
 podman manifest inspect "$ADDON_INDEX" | jq -r '
   .manifests[] |
@@ -54,10 +54,11 @@ podman manifest inspect "$ADDON_INDEX" | jq -r \
 '
 ```
 
-For this preview, the result is
-`sha256:4a2a7a75adbab5f8827f747a17b8c2a21575020dad0de7d461a3b6760371b506`.
+For the `main` build at commit `7ffc10a`, the result is
+`sha256:037b9b45a992c6825b3c8c210819279bb4ec1e24af92abd95d705efb8abc2c15`.
 Using that descriptor digest selects the image itself, so a build does not need
-the other architecture or libc payloads.
+the other architecture or libc payloads. The `next` tag can move, so inspect it
+again to get the digest for a later build.
 
 ## Copy the selected image into a base image
 
@@ -67,7 +68,7 @@ This example uses UBI 10 and the digest above:
 ```Dockerfile
 FROM registry.access.redhat.com/ubi10/ubi:latest
 
-COPY --from=ghcr.io/feloy/openshell-build-image-addons-codex/pr@sha256:4a2a7a75adbab5f8827f747a17b8c2a21575020dad0de7d461a3b6760371b506 / /
+COPY --from=ghcr.io/feloy/openshell-build-image-addons-codex@sha256:037b9b45a992c6825b3c8c210819279bb4ec1e24af92abd95d705efb8abc2c15 / /
 
 ENV CODEX_PATH=/usr/local/bin/codex
 ENV PATH=/usr/local/bin:${PATH}
