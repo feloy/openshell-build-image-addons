@@ -19,21 +19,23 @@ SPDX-License-Identifier: Apache-2.0
 
 # Image builds
 
-Pull requests build every available image for `linux/amd64` and `linux/arm64`.
+Pull requests build one OCI image index per agent. Each configured libc has
+separate `linux/amd64` and `linux/arm64` images in that index.
 After a successful PR check, a separate workflow publishes the image artifacts to
-`ghcr.io/<owner>/<repository>-<suffix>/pr:<head-sha>`, including both architectures
-and provenance attestations. A preview check on the PR shows each image reference.
+`ghcr.io/<owner>/<repository>-<agent>/pr:<head-sha>`, including every architecture
+and libc descriptor and provenance attestations. A preview check on the PR shows
+each image reference.
 This also works for fork PRs: the build uploads artifacts with read-only permissions,
 and the publishing workflow copies the images without executing PR code.
 The publishing workflow must exist on the default branch to receive `workflow_run`
 events.
 
-Pushes to `main` and manual runs also publish each image to
-`ghcr.io/<owner>/<repository>-<suffix>` with `next` and commit-SHA tags, plus
+Pushes to `main` and manual runs also publish each agent index to
+`ghcr.io/<owner>/<repository>-<agent>` with `next` and commit-SHA tags, plus
 provenance attestations.
 
 Each directory under `agents/` represents an agent. The directory name determines
-the agent portion of the image suffix; any agent name can be used.
+the image suffix.
 
 Configure the space-separated libc variants in the top-level `env` block of
 [image-matrix.yaml](workflows/image-matrix.yaml):
@@ -44,15 +46,28 @@ env:
 ```
 
 Remove an entry to disable it, or add an entry to discover another variant.
-For each configured libc, discovery looks for `agents/<agent>/Containerfile.<libc>`
-and uses the image suffix `<agent>-<libc>`. The default configuration builds:
+For each configured libc, discovery looks for `agents/<agent>/Containerfile.<libc>`.
+The default configuration builds these descriptors in each agent index:
 
-| Image suffix | Containerfile |
-| --- | --- |
-| `<agent>-glibc` | `agents/<agent>/Containerfile.glibc` |
-| `<agent>-musl` | `agents/<agent>/Containerfile.musl` |
+| Platform | Libc annotation | Containerfile |
+| --- | --- | --- |
+| `linux/amd64` | `glibc` | `agents/<agent>/Containerfile.glibc` |
+| `linux/arm64` | `glibc` | `agents/<agent>/Containerfile.glibc` |
+| `linux/amd64` | `musl` | `agents/<agent>/Containerfile.musl` |
+| `linux/arm64` | `musl` | `agents/<agent>/Containerfile.musl` |
+
+Each descriptor has an `ai.openkaiden.openshell-build-image.libc` annotation on
+the index entry. Its image contains only that libc's files and its own `ENV`
+settings. A consumer should inspect the index, match both the base image's
+architecture and libc, and use the matching descriptor digest in its generated
+build. It should copy the selected image's `ENV` settings into the final image
+as well as its files, and fail if the index has libc annotations but no matching
+entry.
+
+For addon images without libc annotations, copy all files from the image root.
+This also supports images intended for a single libc.
 
 The build context is `agents/<agent>/`. Add a directory with its Containerfiles
 and build context files to enable a new agent automatically in both workflows.
-Variants without a Containerfile are skipped with a notice.
-Each variant builds independently, so one failed build does not cancel the others.
+Variants without a Containerfile are skipped with a notice. Each agent builds
+independently, so one failed build does not cancel the others.

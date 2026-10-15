@@ -48,19 +48,29 @@ jobs:
             [[ -d "$agent_dir" ]] || continue
             context="${agent_dir%/}"
             agent="${context##*/}"
+            variants='[]'
             for libc in "${libc_variants[@]}"; do
               containerfile="${context}/Containerfile.${libc}"
               if [[ ! -f "$containerfile" ]]; then
-                echo "::notice::Skipping ${agent}-${libc}: no Containerfile"
+                echo "::notice::Skipping ${agent}/${libc}: no Containerfile"
                 continue
               fi
-              images=$(jq -c \
-                --arg suffix "${agent}-${libc}" \
+              variants=$(jq -c \
+                --arg libc "$libc" \
                 --arg containerfile "$containerfile" \
-                --arg context "$context" \
-                '. + [{suffix: $suffix, containerfile: $containerfile, context: $context}]' \
-                <<< "$images")
+                '. + [{libc: $libc, containerfile: $containerfile}]' \
+                <<< "$variants")
             done
+            if [[ "$variants" == '[]' ]]; then
+              echo "::notice::Skipping ${agent}: no supported Containerfiles"
+              continue
+            fi
+            images=$(jq -c \
+              --arg suffix "$agent" \
+              --arg context "$context" \
+              --argjson variants "$variants" \
+              '. + [{suffix: $suffix, context: $context, variants: $variants}]' \
+              <<< "$images")
           done
 
           if [[ "$images" == '[]' ]]; then
