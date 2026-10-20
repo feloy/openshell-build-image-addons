@@ -17,35 +17,20 @@
 
 # registry.access.redhat.com/hi/core-runtime:latest-builder
 FROM registry.access.redhat.com/hi/core-runtime@sha256:9e64e6716489071ad17be6f3b58f2cb3ac47763e1e4cf9cde01b1f44497bd82a AS builder
-ARG CLAUDE_CODE_VERSION=2.1.286
-ARG BUN_VERSION="bun-v1.4.2"
-ARG CLAUDE_AGENT_ACP_VERSION=v0.85.0
-ARG CLAUDE_AGENT_ACP_SHA=c84845272fe3c55c1f97759f00ee48a1356fccae
+ARG CLAUDE_CODE_VERSION=""
+ARG BUN_VERSION=""
+ARG CLAUDE_AGENT_ACP_VERSION=""
+ARG CLAUDE_AGENT_ACP_SHA=""
 
 USER root
 RUN dnf install -y git unzip && dnf clean all
-RUN set -eux; \
-    curl -fsSL https://bun.com/install | bash -s -- "${BUN_VERSION}"; \
-    install -D -m 0755 "$(readlink -f /tmp/.bun/bin/bun)" /usr/local/bin/bun
+COPY scripts/install-bun.sh /tmp/install-bun.sh
+RUN bash /tmp/install-bun.sh
 
 USER 65532
-
-RUN mkdir -p /tmp/rootfs
-
-# Install Claude and then copy it inside the root filesystem
-RUN set -eux; \
-    curl -fsSL https://claude.ai/install.sh | bash -s -- "${CLAUDE_CODE_VERSION}"; \
-    install -D -m 0755 "$(readlink -f /tmp/.local/bin/claude)" /tmp/rootfs/usr/local/bin/claude
-
-# Build the ACP wrapper with bun and copy it inside the root filesystem
-
-RUN set -eux; \
-    # clone the ACP tag and check it still points to the expected commit
-    git clone --depth 1 --branch "${CLAUDE_AGENT_ACP_VERSION}" https://github.com/agentclientprotocol/claude-agent-acp /tmp/claude-agent-acp; \
-    test "$(git -C /tmp/claude-agent-acp rev-parse HEAD)" = "${CLAUDE_AGENT_ACP_SHA}"; \
-    cd /tmp/claude-agent-acp; \
-    bun install; \
-    bun build --compile src/index.ts --outfile /tmp/rootfs/usr/local/bin/claude-agent-acp
+COPY scripts/build-acp.sh /tmp/build-acp.sh
+COPY agents/claude/install.sh /tmp/install-agent.sh
+RUN bash /tmp/install-agent.sh
 
 # Now create our final image with reduced layers
 FROM scratch
