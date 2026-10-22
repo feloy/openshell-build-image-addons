@@ -17,36 +17,20 @@
 
 # registry.access.redhat.com/hi/core-runtime:latest-builder
 FROM registry.access.redhat.com/hi/core-runtime@sha256:9e64e6716489071ad17be6f3b58f2cb3ac47763e1e4cf9cde01b1f44497bd82a AS builder
-# CODEX_VERSION must stay in the range accepted by @openai/codex in the ACP adapter.
-ARG CODEX_VERSION=0.159.3
-ARG BUN_VERSION="bun-v1.4.2"
-ARG CODEX_ACP_VERSION=v2.1.1
-ARG CODEX_ACP_SHA=68d7d2d5ddfc0ed5746f9f6130892dda685e65dd
+ARG CODEX_VERSION=""
+ARG BUN_VERSION=""
+ARG CODEX_ACP_VERSION=""
+ARG CODEX_ACP_SHA=""
 
 USER root
 RUN dnf install -y gawk git gzip tar unzip && dnf clean all
-RUN set -eux; \
-    curl -fsSL https://bun.com/install | bash -s -- "${BUN_VERSION}"; \
-    install -D -m 0755 "$(readlink -f /tmp/.bun/bin/bun)" /usr/local/bin/bun
+COPY scripts/install-bun.sh /tmp/install-bun.sh
+RUN bash /tmp/install-bun.sh
 
 USER 65532
-
-RUN mkdir -p /tmp/rootfs/usr/local/bin /tmp/rootfs/usr/local/lib
-
-# Keep the whole standalone package: Codex needs its metadata and bundled tools.
-RUN set -eux; \
-    curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_NON_INTERACTIVE=1 sh -s -- --release "${CODEX_VERSION}"; \
-    cp -a "$(readlink -f /tmp/.codex/packages/standalone/current)" /tmp/rootfs/usr/local/lib/codex; \
-    ln -s ../lib/codex/bin/codex /tmp/rootfs/usr/local/bin/codex
-
-# Build the ACP adapter with bun and copy it inside the root filesystem.
-RUN set -eux; \
-    # clone the ACP tag and check it still points to the expected commit
-    git clone --depth 1 --branch "${CODEX_ACP_VERSION}" https://github.com/agentclientprotocol/codex-acp /tmp/codex-acp; \
-    test "$(git -C /tmp/codex-acp rev-parse HEAD)" = "${CODEX_ACP_SHA}"; \
-    cd /tmp/codex-acp; \
-    bun install; \
-    bun build --compile src/index.ts --outfile /tmp/rootfs/usr/local/bin/codex-acp
+COPY scripts/build-acp.sh /tmp/build-acp.sh
+COPY agents/codex/install.sh /tmp/install-agent.sh
+RUN bash /tmp/install-agent.sh
 
 # Now create our final image with reduced layers.
 FROM scratch

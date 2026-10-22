@@ -67,7 +67,14 @@ entry.
 For addon images without libc annotations, copy all files from the image root.
 This also supports images intended for a single libc.
 
-The build context is `agents/<agent>/`. Add a directory with its Containerfiles
-and build context files to enable a new agent automatically in both workflows.
-Variants without a Containerfile are skipped with a notice. Each agent builds
-independently, so one failed build does not cancel the others.
+The build context is the repository root, so each Containerfile can copy shared
+helpers from `scripts/` and its own installer from `agents/<agent>/`. Add a
+directory with its Containerfiles and installer to enable a new agent
+automatically in both workflows. The presence of `Containerfile.<libc>` declares
+support for that libc. Variants without a Containerfile are skipped with a
+notice. Each agent builds independently, so one failed build does not cancel
+the others.
+
+The version defaults are kept in `scripts/install-bun.sh` and each agent's
+`install.sh`. Containerfile build arguments can override those defaults when
+needed.

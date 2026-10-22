@@ -46,11 +46,11 @@ jobs:
           images='[]'
           for agent_dir in agents/*/; do
             [[ -d "$agent_dir" ]] || continue
-            context="${agent_dir%/}"
-            agent="${context##*/}"
+            agent_dir="${agent_dir%/}"
+            agent="${agent_dir##*/}"
             variants='[]'
             for libc in "${libc_variants[@]}"; do
-              containerfile="${context}/Containerfile.${libc}"
+              containerfile="${agent_dir}/Containerfile.${libc}"
               if [[ ! -f "$containerfile" ]]; then
                 echo "::notice::Skipping ${agent}/${libc}: no Containerfile"
                 continue
@@ -67,7 +67,7 @@ jobs:
             fi
             images=$(jq -c \
               --arg suffix "$agent" \
-              --arg context "$context" \
+              --arg context . \
               --argjson variants "$variants" \
               '. + [{suffix: $suffix, context: $context, variants: $variants}]' \
               <<< "$images")
