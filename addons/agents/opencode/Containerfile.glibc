@@ -15,28 +15,18 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-# docker.io/library/alpine:3.24.2
-FROM docker.io/library/alpine@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS builder
-ARG CLAUDE_CODE_VERSION=""
-ARG BUN_VERSION=""
-ARG CLAUDE_AGENT_ACP_VERSION=""
-ARG CLAUDE_AGENT_ACP_SHA=""
+# registry.access.redhat.com/hi/core-runtime:latest-builder
+FROM registry.access.redhat.com/hi/core-runtime@sha256:9e64e6716489071ad17be6f3b58f2cb3ac47763e1e4cf9cde01b1f44497bd82a AS builder
+ARG OPENCODE_VERSION=""
 
-ENV HOME=/tmp
 USER root
-RUN apk add --no-cache bash ca-certificates curl git libgcc libstdc++ ripgrep unzip
-COPY scripts/install-bun.sh /tmp/install-bun.sh
-RUN bash /tmp/install-bun.sh
-RUN chown -R 65532:65532 /tmp/.bun
+RUN dnf install -y gzip tar && dnf clean all
 
 USER 65532
-COPY scripts/build-acp.sh /tmp/build-acp.sh
-COPY agents/claude/install.sh /tmp/install-agent.sh
+COPY addons/agents/opencode/install.sh /tmp/install-agent.sh
 RUN bash /tmp/install-agent.sh
 
-# Now create our final image with reduced layers
+# Now create our final image with reduced layers.
 FROM scratch
 COPY --from=builder /tmp/rootfs/ /
-# Notify the SDK/ACP client where claude binary is located
-ENV CLAUDE_CODE_EXECUTABLE=/usr/local/bin/claude
 ENV PATH=/usr/local/bin

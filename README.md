@@ -19,10 +19,13 @@ SPDX-License-Identifier: Apache-2.0
 
 # Addons for OpenShell-build-image
 
-This repository builds addon images for various agents. Each addon image is an
-OCI index with a separate image for every supported architecture and libc. The
-index descriptors use `ai.openkaiden.openshell-build-image.libc` to identify the
-libc; each selected image contains only its own files and environment settings.
+This repository builds addon images organized by category under
+`addons/<category>/<addon>/`. Agent addons currently live in `addons/agents/`;
+other categories can be added alongside `agents/` and are discovered automatically.
+Each addon image is an OCI index with a separate image for every supported
+architecture and libc. The index descriptors use
+`ai.openkaiden.openshell-build-image.libc` to identify the libc; each selected
+image contains only its own files and environment settings.
 
 ## Inspect the published index
 
@@ -85,4 +88,5 @@ settings. Set the environment needed by the addon in the final image. For an
 addon index without libc annotations, copy all files from the image root; such
 an image may be intended for a single libc.
 
-See [.github/README.md](.github/README.md) for the build and publishing workflows.
+See [.github/IMAGE-BUILDS.md](.github/IMAGE-BUILDS.md) for the build and publishing
+workflows and how to add an addon or category.
