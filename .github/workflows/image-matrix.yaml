@@ -49,11 +49,19 @@ jobs:
             addon_dir="${addon_dir%/}"
             addon="${addon_dir##*/}"
             variants='[]'
+            if [[ -f "${addon_dir}/Containerfile" ]]; then
+              variants=$(jq -cn --arg containerfile "${addon_dir}/Containerfile" \
+                '[{containerfile: $containerfile}]')
+            fi
             for libc in "${libc_variants[@]}"; do
               containerfile="${addon_dir}/Containerfile.${libc}"
               if [[ ! -f "$containerfile" ]]; then
                 echo "::notice::Skipping ${addon_dir}/${libc}: no Containerfile"
                 continue
+              fi
+              if [[ -f "${addon_dir}/Containerfile" ]]; then
+                echo "::error::${addon_dir} mixes a plain Containerfile with libc variants"
+                exit 1
               fi
               variants=$(jq -c \
                 --arg libc "$libc" \
