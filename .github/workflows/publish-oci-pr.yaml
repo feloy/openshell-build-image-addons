@@ -95,8 +95,9 @@ jobs:
             .mediaType == "application/vnd.oci.image.index.v1+json" and
             (.manifests | length >= 2 and
               all(.[]; .platform.os == "linux" and
-                (.platform.architecture == "amd64" or .platform.architecture == "arm64") and
-                (.annotations["ai.openkaiden.openshell-build-image.libc"] | type == "string" and length > 0)) and
+                (.platform.architecture == "amd64" or .platform.architecture == "arm64")) and
+              (all(.[]; (.annotations // {} | has("ai.openkaiden.openshell-build-image.libc") | not)) or
+               all(.[]; .annotations["ai.openkaiden.openshell-build-image.libc"] | type == "string" and length > 0)) and
               (group_by(.annotations["ai.openkaiden.openshell-build-image.libc"]) |
                 all(.[]; length == 2 and
                   ([.[].platform.architecture] | sort) == ["amd64", "arm64"])))
