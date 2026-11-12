@@ -17,16 +17,24 @@
 
 # registry.access.redhat.com/hi/core-runtime:latest-builder
 FROM registry.access.redhat.com/hi/core-runtime@sha256:9e64e6716489071ad17be6f3b58f2cb3ac47763e1e4cf9cde01b1f44497bd82a AS builder
-ARG OPENCODE_VERSION=""
+ARG CODEX_VERSION=""
+ARG BUN_VERSION=""
+ARG CODEX_ACP_VERSION=""
+ARG CODEX_ACP_SHA=""
 
 USER root
-RUN dnf install -y gzip tar && dnf clean all
+RUN dnf install -y gawk git gzip tar unzip && dnf clean all
+COPY scripts/install-bun.sh /tmp/install-bun.sh
+RUN bash /tmp/install-bun.sh
 
 USER 65532
-COPY agents/opencode/install.sh /tmp/install-agent.sh
+COPY scripts/build-acp.sh /tmp/build-acp.sh
+COPY addons/agents/codex/install.sh /tmp/install-agent.sh
 RUN bash /tmp/install-agent.sh
 
 # Now create our final image with reduced layers.
 FROM scratch
 COPY --from=builder /tmp/rootfs/ /
+# Notify the ACP adapter where the Codex binary is located.
+ENV CODEX_PATH=/usr/local/bin/codex
 ENV PATH=/usr/local/bin

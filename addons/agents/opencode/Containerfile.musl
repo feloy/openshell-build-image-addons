@@ -24,7 +24,7 @@ USER root
 RUN apk add --no-cache bash ca-certificates curl libgcc libstdc++
 
 USER 65532
-COPY agents/opencode/install.sh /tmp/install-agent.sh
+COPY addons/agents/opencode/install.sh /tmp/install-agent.sh
 RUN bash /tmp/install-agent.sh
 
 # Copy the runtime libraries needed by the OpenCode binary.

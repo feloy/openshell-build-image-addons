@@ -23,7 +23,7 @@ on:
       image-suffix:
         type: string
         required: true
-        description: Agent image suffix
+        description: Addon image suffix
       variants:
         type: string
         required: true
