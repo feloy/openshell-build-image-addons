@@ -23,21 +23,27 @@ index="${IMAGE_NAME}:next"
 
 jq -e '
   type == "array" and length > 0 and
-  all(.[]; (.libc | type == "string" and test("^[a-z0-9][a-z0-9._-]*$")) and
+  all(.[]; (.libc == null or
+            (.libc | type == "string" and test("^[a-z0-9][a-z0-9._-]*$"))) and
            (.containerfile | type == "string" and length > 0)) and
+  (all(.[]; .libc == null) or all(.[]; .libc != null)) and
   ([.[].libc] | unique | length) == length
 ' <<< "$VARIANTS_JSON" >/dev/null
 
 buildah manifest create "$index"
 
-variant_lines=$(jq -r '.[] | [.libc, .containerfile] | @tsv' <<< "$VARIANTS_JSON")
-while IFS=$'\t' read -r libc containerfile; do
+variant_lines=$(jq -r '.[] | [.containerfile, (.libc // "")] | @tsv' <<< "$VARIANTS_JSON")
+while IFS=$'\t' read -r containerfile libc; do
   for arch in amd64 arm64; do
-    variant_image="${IMAGE_NAME}:${arch}-${libc}"
+    variant_image="${IMAGE_NAME}:${arch}${libc:+-${libc}}"
     buildah bud --format oci --platform "linux/${arch}" \
       --file "$containerfile" --tag "$variant_image" "$BUILD_CONTEXT"
-    buildah manifest add --annotation "${annotation}=${libc}" \
-      "$index" "$variant_image"
+    if [[ -n "$libc" ]]; then
+      buildah manifest add --annotation "${annotation}=${libc}" \
+        "$index" "$variant_image"
+    else
+      buildah manifest add "$index" "$variant_image"
+    fi
   done
 done <<< "$variant_lines"
 

@@ -27,7 +27,7 @@ on:
       variants:
         type: string
         required: true
-        description: JSON array of libc names and Containerfile paths
+        description: JSON array of Containerfile paths with optional libc names
       context:
         type: string
         required: true

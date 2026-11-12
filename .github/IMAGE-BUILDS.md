@@ -19,8 +19,10 @@ SPDX-License-Identifier: Apache-2.0
 
 # Image builds
 
-Pull requests build one OCI image index per addon. Each configured libc has
-separate `linux/amd64` and `linux/arm64` images in that index.
+Pull requests build one OCI image index per addon, with `linux/amd64` and
+`linux/arm64` images. Addons with libc-specific files have a separate pair of
+images for each configured libc. Addons that work with either libc have just one
+pair, without libc annotations.
 After a successful PR check, a separate workflow publishes the image artifacts to
 `ghcr.io/<owner>/<repository>-<addon>/pr:<head-sha>`, including every architecture
 and libc descriptor and provenance attestations. A preview check on the PR shows
@@ -54,7 +56,7 @@ env:
 Remove an entry to disable it, or add an entry to discover another variant.
 For each configured libc, discovery looks for
 `addons/<category>/<addon>/Containerfile.<libc>`.
-The default configuration builds these descriptors in each addon index:
+The default configuration builds these descriptors for a libc-specific addon:
 
 | Platform | Libc annotation | Containerfile |
 | --- | --- | --- |
@@ -63,16 +65,24 @@ The default configuration builds these descriptors in each addon index:
 | `linux/amd64` | `musl` | `addons/<category>/<addon>/Containerfile.musl` |
 | `linux/arm64` | `musl` | `addons/<category>/<addon>/Containerfile.musl` |
 
-Each descriptor has an `ai.openkaiden.openshell-build-image.libc` annotation on
-the index entry. Its image contains only that libc's files and its own `ENV`
-settings. A consumer should inspect the index, match both the base image's
+Each libc-specific descriptor has an `ai.openkaiden.openshell-build-image.libc`
+annotation on the index entry. Its image contains only that libc's files and its
+own `ENV` settings. A consumer should inspect the index, match both the base image's
 architecture and libc, and use the matching descriptor digest in its generated
 build. It should copy the selected image's `ENV` settings into the final image
 as well as its files, and fail if the index has libc annotations but no matching
 entry.
 
-For addon images without libc annotations, copy all files from the image root.
-This also supports images intended for a single libc.
+For an addon that works with either libc, provide a plain
+`addons/<category>/<addon>/Containerfile` instead. Discovery builds it once per
+architecture, and the index entries omit the libc annotation. For example,
+`addons/devtools/github-cli/Containerfile` packages the statically linked `gh`
+binary in this format. Do not combine a plain Containerfile with libc-specific
+Containerfiles in the same addon directory.
+
+For addon indexes without libc annotations, consumers select by platform and copy
+all files from the selected image root. This also supports images intended for a
+single libc.
 
 The build context is the repository root, so each Containerfile can copy shared
 helpers from `scripts/` and its own installer from
