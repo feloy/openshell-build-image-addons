@@ -18,7 +18,9 @@
 
 set -euo pipefail
 
-gh_version="${GH_VERSION:-2.103.3}"
+# Update the default version and both pinned checksums together.
+default_gh_version=2.103.3
+gh_version="${GH_VERSION:-${default_gh_version}}"
 case "$(uname -m)" in
     x86_64) arch=amd64 ;;
     aarch64|arm64) arch=arm64 ;;
@@ -33,10 +35,22 @@ release_dir="gh_${gh_version}_linux_${arch}"
 archive="${release_dir}.tar.gz"
 release_url="https://github.com/cli/cli/releases/download/v${gh_version}"
 curl -fsSL "${release_url}/${archive}" -o "${tmp_dir}/${archive}"
-curl -fsSL "${release_url}/gh_${gh_version}_checksums.txt" -o "${tmp_dir}/checksums.txt"
+if [[ "$gh_version" == "$default_gh_version" ]]; then
+    case "$arch" in
+        amd64) checksum=4c806978ffce1cec70853302a56d70ac6da4f19bae7adca4e1a8ab00633dd91d ;;
+        arm64) checksum=ee32df2323c8847f5fac6cb6b4b69ca75828e9329a8f22f677021f7b3306ce63 ;;
+    esac
+else
+    curl -fsSL "${release_url}/gh_${gh_version}_checksums.txt" -o "${tmp_dir}/checksums.txt"
+    checksum=$(awk -v archive="$archive" '$2 == archive {print $1}' "${tmp_dir}/checksums.txt")
+fi
+if [[ ! "$checksum" =~ ^[[:xdigit:]]{64}$ ]]; then
+    echo "Expected exactly one SHA-256 checksum for ${archive}" >&2
+    exit 1
+fi
 (
     cd "$tmp_dir"
-    grep -F "  ${archive}" checksums.txt | sha256sum -c -
+    printf '%s  %s\n' "$checksum" "$archive" | sha256sum -c -
 )
 
 tar -xzf "${tmp_dir}/${archive}" -C "$tmp_dir" "${release_dir}/bin/gh" "${release_dir}/LICENSE"
