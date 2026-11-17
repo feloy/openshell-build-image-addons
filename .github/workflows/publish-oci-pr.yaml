@@ -55,14 +55,14 @@ jobs:
             | {suffix: (.name | ltrimstr("oci-image-")), artifact: .name}]' \
             <<< "$artifacts")
           if [[ "$images" == '[]' ]]; then
-            echo "::error::No PR image artifacts found"
-            exit 1
+            echo "::notice::No affected PR images to publish"
           fi
           echo "images=$images" >> "$GITHUB_OUTPUT"
 
   publish:
     name: Publish ${{ matrix.image.suffix }}/pr
     needs: images
+    if: ${{ needs.images.outputs.images != '[]' }}
     runs-on: ubuntu-26.04
     permissions:
       contents: read

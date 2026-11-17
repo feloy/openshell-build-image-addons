@@ -23,6 +23,18 @@ Pull requests build one OCI image index per addon, with `linux/amd64` and
 `linux/arm64` images. Addons with libc-specific files have a separate pair of
 images for each configured libc. Addons that work with either libc have just one
 pair, without libc annotations.
+
+The `pull_request.paths` list in [pr-check.yaml](workflows/pr-check.yaml) triggers
+checks only for changes to addon Containerfiles, installers, shared helpers, build
+workflows, or context ignore files. Documentation-only changes do not trigger it.
+Within a matching PR, only addons with changed Containerfiles or installers are
+built. Changes to `scripts/install-bun.sh` or `scripts/build-acp.sh` select Claude
+and Codex; shared build workflow, build script, and ignore-file changes select all
+addons. Each selected addon builds its complete index, including all supported
+architectures and libc variants. Only repository file changes are considered.
+When adding a shared dependency, update both the trigger paths and the path
+selection in [image-matrix.yaml](workflows/image-matrix.yaml).
+
 After a successful PR check, a separate workflow publishes the image artifacts to
 `ghcr.io/<owner>/<repository>-<addon>/pr:<head-sha>`, including every architecture
 and libc descriptor and provenance attestations. A preview check on the PR shows

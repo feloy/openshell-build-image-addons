@@ -22,21 +22,27 @@ env:
 
 on:
   workflow_call:
+    inputs:
+      changed-only:
+        type: boolean
+        default: false
+        description: Select only images affected by pull request changes
     outputs:
       images:
-        description: Available image variants as a JSON array
+        description: Selected addon images as a JSON array
         value: ${{ jobs.discover.outputs.images }}
 
 jobs:
   discover:
     runs-on: ubuntu-26.04
     outputs:
-      images: ${{ steps.matrix.outputs.images }}
+      images: ${{ steps.select.outputs.images }}
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          fetch-depth: ${{ inputs.changed-only && '0' || '1' }}
 
       - name: Discover Containerfiles
         id: matrix
@@ -92,5 +98,40 @@ jobs:
           if [[ "$images" == '[]' ]]; then
             echo "::error::No supported image Containerfiles found"
             exit 1
+          fi
+          echo "images=$images" >> "$GITHUB_OUTPUT"
+
+      - name: Select images
+        id: select
+        env:
+          IMAGES_JSON: ${{ steps.matrix.outputs.images }}
+          CHANGED_ONLY: ${{ inputs.changed-only }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          images="$IMAGES_JSON"
+          if [[ "$CHANGED_ONLY" == true ]]; then
+            changed_paths=$(git diff --name-only --no-renames "$BASE_SHA...$HEAD_SHA" --)
+            addons=$(
+              while IFS= read -r path; do
+                case "$path" in
+                  addons/*/*/Containerfile*|addons/*/*/install.sh)
+                    addon="${path#addons/*/}"
+                    echo "${addon%%/*}"
+                    ;;
+                  scripts/install-bun.sh|scripts/build-acp.sh)
+                    printf '%s\n' claude codex
+                    ;;
+                  .github/workflows/pr-check.yaml|.github/workflows/image-matrix.yaml|\
+                  .github/workflows/oci-image.yaml|.github/scripts/build-addon-index.sh|\
+                  .containerignore|.dockerignore)
+                    echo '*'
+                    ;;
+                esac
+              done <<< "$changed_paths" | jq -Rsc 'split("\n") | map(select(length > 0)) | unique'
+            )
+            images=$(jq -c --argjson addons "$addons" \
+              '[.[] | select(.suffix as $name | $addons | index("*") or index($name))]' \
+              <<< "$images")
           fi
           echo "images=$images" >> "$GITHUB_OUTPUT"
