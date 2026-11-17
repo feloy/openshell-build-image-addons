@@ -106,6 +106,7 @@ support for that libc. Variants without a Containerfile are skipped with a
 notice. Each addon builds independently, so one failed build does not cancel
 the others.
 
-The version defaults are kept in `scripts/install-bun.sh` and each addon's
-`install.sh`. Containerfile build arguments can override those defaults when
-needed.
+Version defaults for downloaded releases are kept in `scripts/install-bun.sh`
+and each addon's `install.sh`. Containerfile build arguments can override those
+defaults when needed. Addons sourced from existing images pin their versions and
+image digests in their Containerfiles.
