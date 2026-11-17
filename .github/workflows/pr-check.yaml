@@ -19,6 +19,17 @@ name: pr-check
 
 on:
   pull_request:
+    paths:
+      - 'addons/**/Containerfile*'
+      - 'addons/**/install.sh'
+      - 'scripts/install-bun.sh'
+      - 'scripts/build-acp.sh'
+      - '.github/workflows/pr-check.yaml'
+      - '.github/workflows/image-matrix.yaml'
+      - '.github/workflows/oci-image.yaml'
+      - '.github/scripts/build-addon-index.sh'
+      - '.containerignore'
+      - '.dockerignore'
 
 permissions:
   contents: read
@@ -26,10 +37,13 @@ permissions:
 jobs:
   images:
     uses: ./.github/workflows/image-matrix.yaml
+    with:
+      changed-only: true
 
   build:
     name: Check ${{ matrix.image.suffix }}
     needs: images
+    if: ${{ needs.images.outputs.images != '[]' }}
     strategy:
       fail-fast: false
       matrix:
