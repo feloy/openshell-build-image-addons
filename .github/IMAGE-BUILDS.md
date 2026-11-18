@@ -44,9 +44,13 @@ and the publishing workflow copies the images without executing PR code.
 The publishing workflow must exist on the default branch to receive `workflow_run`
 events.
 
-Pushes to `main` and manual runs also publish each addon index to
+Pushes to `main` use the same addon selection rules, comparing the commits before
+and after the entire push. Each selected addon index is published to
 `ghcr.io/<owner>/<repository>-<addon>` with `next` and commit-SHA tags, plus
-provenance attestations.
+provenance attestations. If no build inputs changed, publishing is skipped.
+Unchanged addons keep their existing tags; they do not get a tag for the new
+commit. Manual runs rebuild and publish all addons, as do pushes whose previous
+commit is unavailable (for example, when creating the branch).
 
 Addons are organized as `addons/<category>/<addon>/`. For example,
 `addons/agents/codex/` contains the Codex agent addon. Categories are directories

@@ -25,6 +25,7 @@ on:
       - 'scripts/install-bun.sh'
       - 'scripts/build-acp.sh'
       - '.github/workflows/pr-check.yaml'
+      - '.github/workflows/next-build.yaml'
       - '.github/workflows/image-matrix.yaml'
       - '.github/workflows/oci-image.yaml'
       - '.github/scripts/build-addon-index.sh'
