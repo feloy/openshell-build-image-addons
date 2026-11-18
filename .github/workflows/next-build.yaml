@@ -36,10 +36,13 @@ concurrency:
 jobs:
   images:
     uses: ./.github/workflows/image-matrix.yaml
+    with:
+      changed-only: ${{ github.event_name == 'push' }}
 
   build:
     name: Publish ${{ matrix.image.suffix }}
     needs: images
+    if: ${{ needs.images.outputs.images != '[]' }}
     strategy:
       fail-fast: false
       matrix:

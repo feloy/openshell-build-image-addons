@@ -26,7 +26,7 @@ on:
       changed-only:
         type: boolean
         default: false
-        description: Select only images affected by pull request changes
+        description: Select only images affected by pull request or push changes
     outputs:
       images:
         description: Selected addon images as a JSON array
@@ -106,12 +106,22 @@ jobs:
         env:
           IMAGES_JSON: ${{ steps.matrix.outputs.images }}
           CHANGED_ONLY: ${{ inputs.changed-only }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           images="$IMAGES_JSON"
           if [[ "$CHANGED_ONLY" == true ]]; then
-            changed_paths=$(git diff --name-only --no-renames "$BASE_SHA...$HEAD_SHA" --)
+            if [[ -z "$BASE_SHA" ]] || ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+              echo "::notice::Base commit unavailable; selecting all images"
+              echo "images=$images" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            diff_range="$BASE_SHA..$HEAD_SHA"
+            if [[ "$EVENT_NAME" == pull_request ]]; then
+              diff_range="$BASE_SHA...$HEAD_SHA"
+            fi
+            changed_paths=$(git diff --name-only --no-renames "$diff_range" --)
             addons=$(
               while IFS= read -r path; do
                 case "$path" in
@@ -122,7 +132,8 @@ jobs:
                   scripts/install-bun.sh|scripts/build-acp.sh)
                     printf '%s\n' claude codex
                     ;;
-                  .github/workflows/pr-check.yaml|.github/workflows/image-matrix.yaml|\
+                  .github/workflows/pr-check.yaml|.github/workflows/next-build.yaml|\
+                  .github/workflows/image-matrix.yaml|\
                   .github/workflows/oci-image.yaml|.github/scripts/build-addon-index.sh|\
                   .containerignore|.dockerignore)
                     echo '*'
