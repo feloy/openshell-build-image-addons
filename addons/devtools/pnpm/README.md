@@ -27,14 +27,14 @@ their supplied licenses, and pnpm's license. The binary and its support files
 stay together in `/usr/local/lib/pnpm`, with commands in `/usr/local/bin`.
 
 The workflows publish the addon as
-`ghcr.io/feloy/openshell-build-image-addons-pnpm:next`, with `linux/amd64` and
+`ghcr.io/openkaiden/openshell-build-image-addons-pnpm:next`, with `linux/amd64` and
 `linux/arm64` images for both `glibc` and `musl`. Select the descriptor matching
 your base image's architecture and libc using the
 [index inspection example](../../../README.md#inspect-the-published-index),
 then copy its files and carry over its environment:
 
 ```Dockerfile
-COPY --from=ghcr.io/feloy/openshell-build-image-addons-pnpm@sha256:<selected-digest> / /
+COPY --from=ghcr.io/openkaiden/openshell-build-image-addons-pnpm@sha256:<selected-digest> / /
 ENV PATH=/usr/local/bin:${PATH}
 ```
 
@@ -46,8 +46,8 @@ select both addons' descriptors for the same architecture and libc:
 
 ```Dockerfile
 FROM registry.access.redhat.com/ubi10/ubi:latest
-COPY --from=ghcr.io/feloy/openshell-build-image-addons-node-24@sha256:<node-digest> / /
-COPY --from=ghcr.io/feloy/openshell-build-image-addons-pnpm@sha256:<pnpm-digest> / /
+COPY --from=ghcr.io/openkaiden/openshell-build-image-addons-node-24@sha256:<node-digest> / /
+COPY --from=ghcr.io/openkaiden/openshell-build-image-addons-pnpm@sha256:<pnpm-digest> / /
 ENV PATH=/usr/local/bin:${PATH}
 ```
 

@@ -33,7 +33,7 @@ image contains only its own files and environment settings.
 This example uses the Codex image published from `main` under the `next` tag:
 
 ```sh
-ADDON_INDEX=ghcr.io/feloy/openshell-build-image-addons-codex:next
+ADDON_INDEX=ghcr.io/openkaiden/openshell-build-image-addons-codex:next
 
 podman manifest inspect "$ADDON_INDEX" | jq -r '
   .manifests[] |
@@ -72,7 +72,7 @@ This example uses UBI 10 and the digest above:
 ```Dockerfile
 FROM registry.access.redhat.com/ubi10/ubi:latest
 
-COPY --from=ghcr.io/feloy/openshell-build-image-addons-codex@sha256:037b9b45a992c6825b3c8c210819279bb4ec1e24af92abd95d705efb8abc2c15 / /
+COPY --from=ghcr.io/openkaiden/openshell-build-image-addons-codex@sha256:037b9b45a992c6825b3c8c210819279bb4ec1e24af92abd95d705efb8abc2c15 / /
 
 ENV CODEX_PATH=/usr/local/bin/codex
 ENV PATH=/usr/local/bin:${PATH}
