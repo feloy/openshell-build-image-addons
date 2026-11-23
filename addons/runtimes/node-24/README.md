@@ -27,14 +27,14 @@ dependency notices. The upstream image's Yarn installation and container
 entrypoint are omitted.
 
 The workflows publish the addon as
-`ghcr.io/feloy/openshell-build-image-addons-node-24:next`, with `linux/amd64` and
+`ghcr.io/openkaiden/openshell-build-image-addons-node-24:next`, with `linux/amd64` and
 `linux/arm64` images for both `glibc` and `musl`. Select the descriptor matching
 your base image's architecture and libc using the
 [index inspection example](../../../README.md#inspect-the-published-index),
 then copy its files and carry over its environment:
 
 ```Dockerfile
-COPY --from=ghcr.io/feloy/openshell-build-image-addons-node-24@sha256:<selected-digest> / /
+COPY --from=ghcr.io/openkaiden/openshell-build-image-addons-node-24@sha256:<selected-digest> / /
 ENV PATH=/usr/local/bin:${PATH}
 ```
 

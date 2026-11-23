@@ -22,14 +22,14 @@ SPDX-License-Identifier: Apache-2.0
 [Containerfile](Containerfile) builds Git from source on Alpine and packages
 statically linked musl binaries, including the HTTP/HTTPS helpers, Git templates,
 and a CA certificate bundle. The same image works with glibc and musl bases.
-The workflows publish it as `ghcr.io/feloy/openshell-build-image-addons-git:next`.
+The workflows publish it as `ghcr.io/openkaiden/openshell-build-image-addons-git:next`.
 The build uses Alpine's default `x86-64` and `armv8-a` CPU baselines without
 `-march=native`. A minimum supported Linux kernel has not yet been established.
 
 Copy the addon files into your base image and carry over its environment:
 
 ```Dockerfile
-COPY --from=ghcr.io/feloy/openshell-build-image-addons-git:next / /
+COPY --from=ghcr.io/openkaiden/openshell-build-image-addons-git:next / /
 ENV PATH=/usr/local/bin:${PATH}
 ENV GIT_SSL_CAINFO=/usr/local/share/git/ca-certificates.crt
 ```
