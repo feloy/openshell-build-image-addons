@@ -21,7 +21,6 @@ FROM docker.io/library/node@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9a
 USER root
 RUN apk add --no-cache patchelf
 
-ENV HOME=/tmp
 USER 65532
 COPY addons/runtimes/node-24/install.sh /tmp/install-node.sh
 RUN sh /tmp/install-node.sh

@@ -21,7 +21,6 @@ ARG PNPM_VERSION=""
 ARG PNPM_SHA256=""
 ARG PNPM_LICENSE_SHA256=""
 
-ENV HOME=/tmp
 USER root
 RUN apk add --no-cache bash ca-certificates curl
 

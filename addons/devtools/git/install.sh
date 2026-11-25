@@ -18,12 +18,21 @@
 
 set -euo pipefail
 
-# Update the default version and pinned source checksum together.
-default_git_version=2.56.1
-git_version="${GIT_VERSION:-${default_git_version}}"
+# Configure the Git and curl source releases below. Update each version and checksum together.
+readonly DEFAULT_GIT_VERSION="2.56.1"
+readonly DEFAULT_GIT_SHA256="f0b0bf89264b9bd2e1c640363e7529643989da76281600473c50745cd34a607f"
+readonly GIT_SOURCE_URL="https://www.kernel.org/pub/software/scm/git"
+
+readonly CURL_SOURCE_VERSION="8.23.0"
+readonly CURL_SOURCE_SHA256="8dadd7d2536a314f982ad05a651b713f426bf7d02cc2c76cffb9796f2218e6c5"
+readonly CURL_SOURCE_URL="https://curl.se/download"
+
+# Nothing else to configure below this line.
+export HOME=/tmp
+git_version="${GIT_VERSION:-${DEFAULT_GIT_VERSION}}"
 checksum="${GIT_SHA256:-}"
-if [[ -z "$checksum" && "$git_version" == "$default_git_version" ]]; then
-    checksum=f0b0bf89264b9bd2e1c640363e7529643989da76281600473c50745cd34a607f
+if [[ -z "$checksum" && "$git_version" == "$DEFAULT_GIT_VERSION" ]]; then
+    checksum="$DEFAULT_GIT_SHA256"
 fi
 if [[ ! "$checksum" =~ ^[[:xdigit:]]{64}$ ]]; then
     echo "Set GIT_SHA256 to the source archive's SHA-256 checksum when overriding GIT_VERSION" >&2
@@ -33,7 +42,7 @@ fi
 tmp_dir=$(mktemp -d)
 trap 'rm -rf "$tmp_dir"' EXIT
 archive="git-${git_version}.tar.xz"
-curl -fsSL "https://www.kernel.org/pub/software/scm/git/${archive}" -o "${tmp_dir}/${archive}"
+curl -fsSL "${GIT_SOURCE_URL}/${archive}" -o "${tmp_dir}/${archive}"
 (
     cd "$tmp_dir"
     printf '%s  %s\n' "$checksum" "$archive" | sha256sum -c -
@@ -44,13 +53,11 @@ tar -xJf "${tmp_dir}/${archive}" -C "${tmp_dir}/source" --strip-components=1
 # Build a private static libcurl without libidn2/libpsl. Alpine's libidn2
 # includes a gnulib error() symbol that conflicts with Git when linked statically.
 # Keep TLS, HTTP/2, proxies and gzip, without the optional IDN/cookie-domain code.
-curl_version=8.23.0
-curl_checksum=8dadd7d2536a314f982ad05a651b713f426bf7d02cc2c76cffb9796f2218e6c5
-curl_archive="curl-${curl_version}.tar.xz"
-curl -fsSL "https://curl.se/download/${curl_archive}" -o "${tmp_dir}/${curl_archive}"
+curl_archive="curl-${CURL_SOURCE_VERSION}.tar.xz"
+curl -fsSL "${CURL_SOURCE_URL}/${curl_archive}" -o "${tmp_dir}/${curl_archive}"
 (
     cd "$tmp_dir"
-    printf '%s  %s\n' "$curl_checksum" "$curl_archive" | sha256sum -c -
+    printf '%s  %s\n' "$CURL_SOURCE_SHA256" "$curl_archive" | sha256sum -c -
 )
 mkdir "${tmp_dir}/curl-source"
 tar -xJf "${tmp_dir}/${curl_archive}" -C "${tmp_dir}/curl-source" --strip-components=1

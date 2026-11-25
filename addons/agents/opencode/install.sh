@@ -18,10 +18,15 @@
 
 set -euo pipefail
 
-opencode_version="${OPENCODE_VERSION:-2.2.5}"
+# Configure the OpenCode release below.
+readonly DEFAULT_OPENCODE_VERSION="2.2.5"
+readonly OPENCODE_INSTALL_URL="https://opencode.ai/v2/install"
+
+# Nothing else to configure below this line.
+opencode_version="${OPENCODE_VERSION:-${DEFAULT_OPENCODE_VERSION}}"
 export HOME=/tmp
 
 mkdir -p /tmp/rootfs
 
-curl -fsSL https://opencode.ai/v2/install | bash -s -- --version "${opencode_version}" --no-modify-path
+curl -fsSL "${OPENCODE_INSTALL_URL}" | bash -s -- --version "${opencode_version}" --no-modify-path
 install -D -m 0755 "${HOME}/.opencode/bin/opencode" /tmp/rootfs/usr/local/bin/opencode
