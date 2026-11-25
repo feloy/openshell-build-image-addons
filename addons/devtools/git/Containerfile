@@ -21,7 +21,6 @@ FROM docker.io/library/alpine@sha256:294b683cb724975bec92580e1e685676bd4b50bda91
 ARG GIT_VERSION=""
 ARG GIT_SHA256=""
 
-ENV HOME=/tmp
 USER root
 RUN apk add --no-cache bash build-base ca-certificates curl expat-dev expat-static \
     linux-headers nghttp2-dev nghttp2-static openssl-dev openssl-libs-static \

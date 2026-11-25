@@ -18,18 +18,15 @@
 
 set -euo pipefail
 
-claude_code_version="${CLAUDE_CODE_VERSION:-2.1.286}"
-claude_agent_acp_version="${CLAUDE_AGENT_ACP_VERSION:-v0.85.0}"
-claude_agent_acp_sha="${CLAUDE_AGENT_ACP_SHA:-c84845272fe3c55c1f97759f00ee48a1356fccae}"
+# Configure the Claude Code release below.
+readonly DEFAULT_CLAUDE_CODE_VERSION="2.1.286"
+readonly CLAUDE_INSTALL_URL="https://claude.ai/install.sh"
+
+# Nothing else to configure below this line.
+claude_code_version="${CLAUDE_CODE_VERSION:-${DEFAULT_CLAUDE_CODE_VERSION}}"
 export HOME=/tmp
 
 mkdir -p /tmp/rootfs
 
-curl -fsSL https://claude.ai/install.sh | bash -s -- "${claude_code_version}"
+curl -fsSL "${CLAUDE_INSTALL_URL}" | bash -s -- "${claude_code_version}"
 install -D -m 0755 "$(readlink -f "${HOME}/.local/bin/claude")" /tmp/rootfs/usr/local/bin/claude
-
-ACP_REPOSITORY=https://github.com/agentclientprotocol/claude-agent-acp \
-ACP_VERSION="${claude_agent_acp_version}" \
-ACP_SHA="${claude_agent_acp_sha}" \
-ACP_OUTPUT=claude-agent-acp \
-    bash /tmp/build-acp.sh

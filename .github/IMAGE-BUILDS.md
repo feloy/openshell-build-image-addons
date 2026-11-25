@@ -110,7 +110,15 @@ support for that libc. Variants without a Containerfile are skipped with a
 notice. Each addon builds independently, so one failed build does not cancel
 the others.
 
-Version defaults for downloaded releases are kept in `scripts/install-bun.sh`
-and each addon's `install.sh`. Containerfile build arguments can override those
-defaults when needed. Addons sourced from existing images pin their versions and
-image digests in their Containerfiles.
+To update Claude Code, Codex, OpenCode, Git, GitHub CLI, or pnpm, edit the
+release version and any associated checksums in the configuration block at the
+top of `addons/<category>/<addon>/install.sh`.
+
+Bun's release tag and installer URL live in `scripts/install-bun.sh`.
+Each ACP adapter's release tag and expected commit SHA live in
+`scripts/build-acp.sh`, which also constructs its repository URL.
+Claude and Codex select their adapter by name after the agent installer runs.
+The checked-in Containerfiles accept build arguments for one-off ACP version
+and commit SHA overrides.
+Addons sourced from existing images pin their versions and image digests in
+their Containerfiles.

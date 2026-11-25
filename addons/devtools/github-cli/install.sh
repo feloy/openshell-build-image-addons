@@ -18,9 +18,15 @@
 
 set -euo pipefail
 
-# Update the default version and both pinned checksums together.
-default_gh_version=2.103.3
-gh_version="${GH_VERSION:-${default_gh_version}}"
+# Configure the GitHub CLI release below. Update the version and both checksums together.
+readonly DEFAULT_GH_VERSION="2.103.3"
+readonly GH_LINUX_AMD64_SHA256="4c806978ffce1cec70853302a56d70ac6da4f19bae7adca4e1a8ab00633dd91d"
+readonly GH_LINUX_ARM64_SHA256="ee32df2323c8847f5fac6cb6b4b69ca75828e9329a8f22f677021f7b3306ce63"
+readonly GH_RELEASES_URL="https://github.com/cli/cli/releases/download"
+
+# Nothing else to configure below this line.
+export HOME=/tmp
+gh_version="${GH_VERSION:-${DEFAULT_GH_VERSION}}"
 case "$(uname -m)" in
     x86_64) arch=amd64 ;;
     aarch64|arm64) arch=arm64 ;;
@@ -33,12 +39,12 @@ trap 'rm -rf "$tmp_dir"' EXIT
 # Upstream Linux binaries use CGO_ENABLED=0 and support both glibc and musl.
 release_dir="gh_${gh_version}_linux_${arch}"
 archive="${release_dir}.tar.gz"
-release_url="https://github.com/cli/cli/releases/download/v${gh_version}"
+release_url="${GH_RELEASES_URL}/v${gh_version}"
 curl -fsSL "${release_url}/${archive}" -o "${tmp_dir}/${archive}"
-if [[ "$gh_version" == "$default_gh_version" ]]; then
+if [[ "$gh_version" == "$DEFAULT_GH_VERSION" ]]; then
     case "$arch" in
-        amd64) checksum=4c806978ffce1cec70853302a56d70ac6da4f19bae7adca4e1a8ab00633dd91d ;;
-        arm64) checksum=ee32df2323c8847f5fac6cb6b4b69ca75828e9329a8f22f677021f7b3306ce63 ;;
+        amd64) checksum="$GH_LINUX_AMD64_SHA256" ;;
+        arm64) checksum="$GH_LINUX_ARM64_SHA256" ;;
     esac
 else
     curl -fsSL "${release_url}/gh_${gh_version}_checksums.txt" -o "${tmp_dir}/checksums.txt"

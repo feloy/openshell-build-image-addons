@@ -18,21 +18,18 @@
 
 set -euo pipefail
 
+# Configure the Codex release below.
 # CODEX_VERSION must stay in the range accepted by @openai/codex in the ACP adapter.
-codex_version="${CODEX_VERSION:-0.159.3}"
-codex_acp_version="${CODEX_ACP_VERSION:-v2.1.1}"
-codex_acp_sha="${CODEX_ACP_SHA:-68d7d2d5ddfc0ed5746f9f6130892dda685e65dd}"
+readonly DEFAULT_CODEX_VERSION="0.159.3"
+readonly CODEX_INSTALL_URL="https://chatgpt.com/codex/install.sh"
+
+# Nothing else to configure below this line.
+codex_version="${CODEX_VERSION:-${DEFAULT_CODEX_VERSION}}"
 export HOME=/tmp
 
 mkdir -p /tmp/rootfs/usr/local/bin /tmp/rootfs/usr/local/lib
 
 # Keep the whole standalone package: Codex needs its metadata and bundled tools.
-curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_NON_INTERACTIVE=1 sh -s -- --release "${codex_version}"
+curl -fsSL "${CODEX_INSTALL_URL}" | CODEX_NON_INTERACTIVE=1 sh -s -- --release "${codex_version}"
 cp -a "$(readlink -f "${HOME}/.codex/packages/standalone/current")" /tmp/rootfs/usr/local/lib/codex
 ln -s ../lib/codex/bin/codex /tmp/rootfs/usr/local/bin/codex
-
-ACP_REPOSITORY=https://github.com/agentclientprotocol/codex-acp \
-ACP_VERSION="${codex_acp_version}" \
-ACP_SHA="${codex_acp_sha}" \
-ACP_OUTPUT=codex-acp \
-    bash /tmp/build-acp.sh

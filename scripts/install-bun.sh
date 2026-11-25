@@ -18,8 +18,12 @@
 
 set -euo pipefail
 
-bun_version="${BUN_VERSION:-bun-v1.4.2}"
+# Configure the Bun release below.
+readonly BUN_VERSION="bun-v1.4.2"
+readonly BUN_INSTALL_URL="https://bun.com/install"
+
+# Nothing else to configure below this line.
 export HOME=/tmp
 
-curl -fsSL https://bun.com/install | bash -s -- "${bun_version}"
+curl -fsSL "${BUN_INSTALL_URL}" | bash -s -- "${BUN_VERSION}"
 install -D -m 0755 "$(readlink -f "${HOME}/.bun/bin/bun")" /usr/local/bin/bun

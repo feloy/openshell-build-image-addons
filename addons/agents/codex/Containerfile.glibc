@@ -18,7 +18,6 @@
 # registry.access.redhat.com/hi/core-runtime:latest-builder
 FROM registry.access.redhat.com/hi/core-runtime@sha256:9e64e6716489071ad17be6f3b58f2cb3ac47763e1e4cf9cde01b1f44497bd82a AS builder
 ARG CODEX_VERSION=""
-ARG BUN_VERSION=""
 ARG CODEX_ACP_VERSION=""
 ARG CODEX_ACP_SHA=""
 
@@ -28,9 +27,13 @@ COPY scripts/install-bun.sh /tmp/install-bun.sh
 RUN bash /tmp/install-bun.sh
 
 USER 65532
-COPY scripts/build-acp.sh /tmp/build-acp.sh
 COPY addons/agents/codex/install.sh /tmp/install-agent.sh
 RUN bash /tmp/install-agent.sh
+
+COPY scripts/build-acp.sh /tmp/build-acp.sh
+ENV ACP_OUTPUT="codex-acp"
+RUN HOME=/tmp ACP_VERSION="${CODEX_ACP_VERSION}" ACP_SHA="${CODEX_ACP_SHA}" \
+    bash /tmp/build-acp.sh
 
 # Now create our final image with reduced layers.
 FROM scratch
