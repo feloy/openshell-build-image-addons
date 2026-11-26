@@ -28,6 +28,27 @@ libc, identified by the `ai.openkaiden.openshell-build-image.libc` descriptor
 annotation. Addons that work with either libc omit that annotation. Each selected
 image contains only its own files and environment settings.
 
+## Addon catalog metadata
+
+Discover addons by reading `addons/<category>/<name>/addon.yaml`. Use the
+directory names for the catalog's `category` and `name` fields. Each file
+contains a single top-level `metadata` mapping with three required, non-empty
+string fields.
+
+| Field | Meaning |
+| --- | --- |
+| `displayName` | Human-readable title shown in the catalog. |
+| `description` | Short description of what the addon provides. |
+| `version` | Upstream release of the primary tool packaged by the addon. |
+
+`addon.yaml` is the source of truth for these fields. The Containerfiles and
+installers define how to build the image. See the [Codex metadata](addons/agents/codex/addon.yaml).
+
+For the catalog's `image` field, use the published repository
+`ghcr.io/openkaiden/openshell-build-image-addons-<name>` followed by `@` and the
+digest of its OCI index. Consumers use that index to select their architecture
+and libc variant.
+
 ## Inspect the published index
 
 This example uses the Codex image published from `main` under the `next` tag:

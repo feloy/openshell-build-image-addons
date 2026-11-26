@@ -105,14 +105,17 @@ helpers from `scripts/` and its own installer from
 `addons/<category>/<addon>/`. For example, the Codex Containerfiles use
 `COPY addons/agents/codex/install.sh /tmp/install-agent.sh`. Add a directory with
 its Containerfiles and installer under any category to enable a new addon
-automatically in both workflows. The presence of `Containerfile.<libc>` declares
-support for that libc. Variants without a Containerfile are skipped with a
-notice. Each addon builds independently, so one failed build does not cancel
-the others.
+automatically in both workflows. Add an `addon.yaml` in the same directory so
+catalogs can discover it. [Addon catalog metadata](../README.md#addon-catalog-metadata)
+
+The presence of `Containerfile.<libc>` declares support for that libc. Variants
+without a Containerfile are skipped with a notice. Each addon builds
+independently, so one failed build does not cancel the others.
 
 To update Claude Code, Codex, OpenCode, Git, GitHub CLI, or pnpm, edit the
 release version and any associated checksums in the configuration block at the
-top of `addons/<category>/<addon>/install.sh`.
+top of `addons/<category>/<addon>/install.sh`. Update `metadata.version` in the
+addon's `addon.yaml` when changing the packaged version.
 
 Bun's release tag and installer URL live in `scripts/install-bun.sh`.
 Each ACP adapter's release tag and expected commit SHA live in
@@ -121,4 +124,4 @@ Claude and Codex select their adapter by name after the agent installer runs.
 The checked-in Containerfiles accept build arguments for one-off ACP version
 and commit SHA overrides.
 Addons sourced from existing images pin their versions and image digests in
-their Containerfiles.
+their Containerfiles. Update `metadata.version` alongside those pins.
