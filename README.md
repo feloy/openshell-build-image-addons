@@ -32,8 +32,9 @@ image contains only its own files and environment settings.
 
 Discover addons by reading `addons/<category>/<name>/addon.yaml`. Use the
 directory names for the catalog's `category` and `name` fields. Each file
-contains a single top-level `metadata` mapping with three required, non-empty
-string fields.
+requires a top-level `apiVersion: v1`, which identifies the manifest format.
+In `v1`, the top-level `metadata` mapping has three required, non-empty string
+fields.
 
 | Field | Meaning |
 | --- | --- |

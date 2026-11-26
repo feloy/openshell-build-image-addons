@@ -15,6 +15,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+apiVersion: v1
 metadata:
   displayName: "Claude Code"
   description: "Claude Code CLI with the Claude Agent ACP adapter."

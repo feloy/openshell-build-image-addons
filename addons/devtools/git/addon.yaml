@@ -15,6 +15,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+apiVersion: v1
 metadata:
   displayName: "Git"
   description: "Statically linked Git with HTTPS support and a bundled CA certificate bundle; works on glibc and musl bases."

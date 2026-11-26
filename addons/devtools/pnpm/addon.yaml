@@ -15,6 +15,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+apiVersion: v1
 metadata:
   displayName: "pnpm"
   description: "pnpm package manager native binary, with a pnpx launcher."
