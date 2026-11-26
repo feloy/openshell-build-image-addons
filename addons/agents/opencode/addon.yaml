@@ -15,6 +15,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+metadata:
+  displayName: "OpenCode"
+  description: "OpenCode AI coding agent CLI."
+  version: &version "2.2.5"
+
 builder:
   variants:
     glibc:
@@ -29,7 +34,7 @@ builder:
             cp -P /usr/lib/libstdc++.so.* /usr/lib/libgcc_s.so.* /tmp/rootfs/usr/local/lib/
 
   env:
-    OPENCODE_VERSION: "2.2.5"
+    OPENCODE_VERSION: *version
 
 final:
   env:

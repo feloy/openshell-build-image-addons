@@ -15,10 +15,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+metadata:
+  displayName: "Git"
+  description: "Statically linked Git with HTTPS support and a bundled CA certificate bundle; works on glibc and musl bases."
+  version: &version "2.56.1"
+
 builder:
   from: alpine
   env:
-    GIT_VERSION: "2.56.1"
+    GIT_VERSION: *version
     GIT_SHA256: "f0b0bf89264b9bd2e1c640363e7529643989da76281600473c50745cd34a607f"
   packages:
     - bash

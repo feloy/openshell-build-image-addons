@@ -15,10 +15,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+metadata:
+  displayName: "pnpm"
+  description: "pnpm package manager native binary, with a pnpx launcher."
+  version: &version "12.21.0"
+
 builder:
   from: alpine
   env:
-    PNPM_VERSION: "12.21.0"
+    PNPM_VERSION: *version
     PNPM_LICENSE_SHA256: "80a07635e0db9aa83758bf4c8d779a673d60c7e09ca315a91375af1a97abe0b0"
   packages: [bash, ca-certificates, curl]
 

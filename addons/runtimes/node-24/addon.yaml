@@ -15,6 +15,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+metadata:
+  displayName: "Node.js 24"
+  description: "Node.js 24 runtime with npm, npx, Corepack and headers for native modules."
+  version: "24.22.3"
+
 builder:
   packages: [patchelf]
 

@@ -15,10 +15,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+metadata:
+  displayName: "GitHub CLI"
+  description: "Statically linked GitHub CLI (gh)."
+  version: &version "2.103.3"
+
 builder:
   from: alpine
   env:
-    GH_VERSION: "2.103.3"
+    GH_VERSION: *version
   packages: [bash, ca-certificates, curl]
 
 final:

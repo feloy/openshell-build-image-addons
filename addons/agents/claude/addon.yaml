@@ -15,6 +15,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+metadata:
+  displayName: "Claude Code"
+  description: "Claude Code CLI with the Claude Agent ACP adapter."
+  version: &version "2.1.286"
+
 builder:
   variants:
     glibc:
@@ -25,7 +30,7 @@ builder:
       packages: [bash, ca-certificates, curl, git, libgcc, libstdc++, ripgrep, unzip]
 
   env:
-    CLAUDE_CODE_VERSION: "2.1.286"
+    CLAUDE_CODE_VERSION: *version
     ACP_OUTPUT: "claude-agent-acp"
 
   tools: [bun]
