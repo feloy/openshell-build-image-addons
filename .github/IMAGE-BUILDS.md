@@ -100,6 +100,14 @@ For addon indexes without libc annotations, consumers select by platform and cop
 all files from the selected image root. This also supports images intended for a
 single libc.
 
+Each platform and libc variant carries the same five catalog labels in its
+image config. `org.opencontainers.image.title`, `org.opencontainers.image.description`,
+and `org.opencontainers.image.version` describe the primary tool.
+`ai.openkaiden.openshell-build-image.name` and
+`ai.openkaiden.openshell-build-image.category` match the addon and category
+directory names. The catalog image reference uses the published repository
+and the digest of the full index.
+
 The build context is the repository root, so each Containerfile can copy shared
 helpers from `scripts/` and its own installer from
 `addons/<category>/<addon>/`. For example, the Codex Containerfiles use
@@ -112,7 +120,9 @@ the others.
 
 To update Claude Code, Codex, OpenCode, Git, GitHub CLI, or pnpm, edit the
 release version and any associated checksums in the configuration block at the
-top of `addons/<category>/<addon>/install.sh`.
+top of `addons/<category>/<addon>/install.sh`. Update the version label's
+fallback in each of the addon's Containerfiles at the same time. Passing a
+release-version build argument also sets the label for that build.
 
 Bun's release tag and installer URL live in `scripts/install-bun.sh`.
 Each ACP adapter's release tag and expected commit SHA live in
@@ -121,4 +131,5 @@ Claude and Codex select their adapter by name after the agent installer runs.
 The checked-in Containerfiles accept build arguments for one-off ACP version
 and commit SHA overrides.
 Addons sourced from existing images pin their versions and image digests in
-their Containerfiles.
+their Containerfiles. For Node 24, update the version label and license URL
+alongside both builder image pins.

@@ -42,3 +42,10 @@ COPY --from=builder /tmp/rootfs/ /
 # Notify the SDK/ACP client where claude binary is located
 ENV CLAUDE_CODE_EXECUTABLE=/usr/local/bin/claude
 ENV PATH=/usr/local/bin
+
+ARG CLAUDE_CODE_VERSION
+LABEL org.opencontainers.image.title="Claude Code" \
+      org.opencontainers.image.description="Claude Code CLI with the Claude Agent ACP adapter." \
+      org.opencontainers.image.version="${CLAUDE_CODE_VERSION:-2.1.286}" \
+      ai.openkaiden.openshell-build-image.name="claude" \
+      ai.openkaiden.openshell-build-image.category="agents"

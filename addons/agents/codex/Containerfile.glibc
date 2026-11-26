@@ -41,3 +41,10 @@ COPY --from=builder /tmp/rootfs/ /
 # Notify the ACP adapter where the Codex binary is located.
 ENV CODEX_PATH=/usr/local/bin/codex
 ENV PATH=/usr/local/bin
+
+ARG CODEX_VERSION
+LABEL org.opencontainers.image.title="Codex" \
+      org.opencontainers.image.description="OpenAI Codex CLI with the Codex ACP adapter." \
+      org.opencontainers.image.version="${CODEX_VERSION:-0.159.3}" \
+      ai.openkaiden.openshell-build-image.name="codex" \
+      ai.openkaiden.openshell-build-image.category="agents"

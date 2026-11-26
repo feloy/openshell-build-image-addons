@@ -30,3 +30,10 @@ RUN bash /tmp/install-github-cli.sh
 FROM scratch
 COPY --from=builder /tmp/rootfs/ /
 ENV PATH=/usr/local/bin
+
+ARG GH_VERSION
+LABEL org.opencontainers.image.title="GitHub CLI" \
+      org.opencontainers.image.description="Statically linked GitHub CLI (gh)." \
+      org.opencontainers.image.version="${GH_VERSION:-2.103.3}" \
+      ai.openkaiden.openshell-build-image.name="github-cli" \
+      ai.openkaiden.openshell-build-image.category="devtools"
