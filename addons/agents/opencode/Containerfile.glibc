@@ -35,5 +35,5 @@ ARG OPENCODE_VERSION
 LABEL org.opencontainers.image.title="OpenCode" \
       org.opencontainers.image.description="OpenCode AI coding agent CLI." \
       org.opencontainers.image.version="${OPENCODE_VERSION:-2.2.5}" \
-      ai.openkaiden.openshell-build-image.name="opencode" \
-      ai.openkaiden.openshell-build-image.category="agents"
+      ai.openkaiden.addon.name="opencode" \
+      ai.openkaiden.addon.category="agents"

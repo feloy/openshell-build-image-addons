@@ -46,5 +46,5 @@ ARG CODEX_VERSION
 LABEL org.opencontainers.image.title="Codex" \
       org.opencontainers.image.description="OpenAI Codex CLI with the Codex ACP adapter." \
       org.opencontainers.image.version="${CODEX_VERSION:-0.159.3}" \
-      ai.openkaiden.openshell-build-image.name="codex" \
-      ai.openkaiden.openshell-build-image.category="agents"
+      ai.openkaiden.addon.name="codex" \
+      ai.openkaiden.addon.category="agents"

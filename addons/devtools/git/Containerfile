@@ -39,5 +39,5 @@ ARG GIT_VERSION
 LABEL org.opencontainers.image.title="Git" \
       org.opencontainers.image.description="Statically linked Git with HTTPS support and a bundled CA certificate bundle; works on glibc and musl bases." \
       org.opencontainers.image.version="${GIT_VERSION:-2.56.1}" \
-      ai.openkaiden.openshell-build-image.name="git" \
-      ai.openkaiden.openshell-build-image.category="devtools"
+      ai.openkaiden.addon.name="git" \
+      ai.openkaiden.addon.category="devtools"

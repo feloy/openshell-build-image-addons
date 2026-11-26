@@ -103,8 +103,8 @@ single libc.
 Each platform and libc variant carries the same five catalog labels in its
 image config. `org.opencontainers.image.title`, `org.opencontainers.image.description`,
 and `org.opencontainers.image.version` describe the primary tool.
-`ai.openkaiden.openshell-build-image.name` and
-`ai.openkaiden.openshell-build-image.category` match the addon and category
+`ai.openkaiden.addon.name` and
+`ai.openkaiden.addon.category` match the addon and category
 directory names. The catalog image reference uses the published repository
 and the digest of the full index.
 

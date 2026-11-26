@@ -40,5 +40,5 @@ ENV PATH=/usr/local/bin
 LABEL org.opencontainers.image.title="Node.js 24" \
       org.opencontainers.image.description="Node.js 24 runtime with npm, npx, Corepack and headers for native modules." \
       org.opencontainers.image.version="24.22.3" \
-      ai.openkaiden.openshell-build-image.name="node-24" \
-      ai.openkaiden.openshell-build-image.category="runtimes"
+      ai.openkaiden.addon.name="node-24" \
+      ai.openkaiden.addon.category="runtimes"

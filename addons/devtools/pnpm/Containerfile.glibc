@@ -37,5 +37,5 @@ ARG PNPM_VERSION
 LABEL org.opencontainers.image.title="pnpm" \
       org.opencontainers.image.description="pnpm package manager native binary, with a pnpx launcher." \
       org.opencontainers.image.version="${PNPM_VERSION:-12.21.0}" \
-      ai.openkaiden.openshell-build-image.name="pnpm" \
-      ai.openkaiden.openshell-build-image.category="devtools"
+      ai.openkaiden.addon.name="pnpm" \
+      ai.openkaiden.addon.category="devtools"
