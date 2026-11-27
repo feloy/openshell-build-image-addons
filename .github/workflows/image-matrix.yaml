@@ -31,12 +31,16 @@ on:
       images:
         description: Selected addon images as a JSON array
         value: ${{ jobs.discover.outputs.images }}
+      builder:
+        description: Release asset used to verify the selected addons
+        value: ${{ jobs.discover.outputs.builder }}
 
 jobs:
   discover:
     runs-on: ubuntu-26.04
     outputs:
       images: ${{ steps.select.outputs.images }}
+      builder: ${{ steps.builder.outputs.asset }}
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -90,8 +94,9 @@ jobs:
             images=$(jq -c \
               --arg suffix "$addon" \
               --arg context . \
+              --arg manifest "$addon_dir/addon.yaml" \
               --argjson variants "$variants" \
-              '. + [{suffix: $suffix, context: $context, variants: $variants}]' \
+              '. + [{suffix: $suffix, context: $context, manifest: $manifest, variants: $variants}]' \
               <<< "$images")
           done
 
@@ -125,7 +130,8 @@ jobs:
             addons=$(
               while IFS= read -r path; do
                 case "$path" in
-                  addons/*/*/Containerfile*|addons/*/*/install.sh)
+                  addons/*/*/Containerfile*|addons/*/*/install.sh|\
+                  addons/*/*/addon.yaml|addons/*/*/inventory.json)
                     addon="${path#addons/*/}"
                     echo "${addon%%/*}"
                     ;;
@@ -135,6 +141,7 @@ jobs:
                   .github/workflows/pr-check.yaml|.github/workflows/next-build.yaml|\
                   .github/workflows/image-matrix.yaml|\
                   .github/workflows/oci-image.yaml|.github/scripts/build-addon-index.sh|\
+                  .github/scripts/verify-addon.sh|\
                   .containerignore|.dockerignore)
                     echo '*'
                     ;;
@@ -146,3 +153,18 @@ jobs:
               <<< "$images")
           fi
           echo "images=$images" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve the latest stable image builder release
+        if: ${{ steps.select.outputs.images != '[]' }}
+        id: builder
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          asset=$(gh api repos/openkaiden/openshell-build-image/releases/latest | jq -ce '
+            .tag_name as $tag |
+            [.assets[] | select(.name == "openshell-build-image-x86_64-unknown-linux-gnu")] |
+            if length == 1 and (.[0].digest | test("^sha256:[a-f0-9]{64}$")) then
+              .[0] | {tag: $tag, url: .browser_download_url, sha256: (.digest | ltrimstr("sha256:"))}
+            else error("latest release has no checksummed Linux x86_64 builder") end
+          ')
+          echo "asset=$asset" >> "$GITHUB_OUTPUT"

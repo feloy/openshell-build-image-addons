@@ -1,0 +1,10 @@
+{
+  "common": {
+    "/usr/local/bin/gh": null,
+    "/usr/local/share/licenses/github-cli/LICENSE": null
+  },
+  "variants": {
+    "amd64": {},
+    "arm64": {}
+  }
+}

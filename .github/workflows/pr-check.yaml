@@ -22,6 +22,8 @@ on:
     paths:
       - 'addons/**/Containerfile*'
       - 'addons/**/install.sh'
+      - 'addons/**/addon.yaml'
+      - 'addons/**/inventory.json'
       - 'scripts/install-bun.sh'
       - 'scripts/build-acp.sh'
       - '.github/workflows/pr-check.yaml'
@@ -29,6 +31,7 @@ on:
       - '.github/workflows/image-matrix.yaml'
       - '.github/workflows/oci-image.yaml'
       - '.github/scripts/build-addon-index.sh'
+      - '.github/scripts/verify-addon.sh'
       - '.containerignore'
       - '.dockerignore'
 
@@ -54,3 +57,5 @@ jobs:
       image-suffix: ${{ matrix.image.suffix }}
       variants: ${{ toJSON(matrix.image.variants) }}
       context: ${{ matrix.image.context }}
+      manifest: ${{ matrix.image.manifest }}
+      builder: ${{ needs.images.outputs.builder }}

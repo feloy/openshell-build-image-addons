@@ -25,15 +25,47 @@ images for each configured libc. Addons that work with either libc have just one
 pair, without libc annotations.
 
 The `pull_request.paths` list in [pr-check.yaml](workflows/pr-check.yaml) triggers
-checks only for changes to addon Containerfiles, installers, shared helpers, build
-workflows, or context ignore files. Documentation-only changes do not trigger it.
-Within a matching PR, only addons with changed Containerfiles or installers are
-built. Changes to `scripts/install-bun.sh` or `scripts/build-acp.sh` select Claude
-and Codex; shared build workflow, build script, and ignore-file changes select all
-addons. Each selected addon builds its complete index, including all supported
-architectures and libc variants. Only repository file changes are considered.
+checks for changes to addon Containerfiles, installers, manifests, inventories,
+shared helpers, build workflows, or context ignore files. Documentation-only
+changes do not trigger it. An addon-specific change selects that addon. Changes
+to `scripts/install-bun.sh` or `scripts/build-acp.sh` select Claude and Codex.
+Changes to shared build or verification tooling and context ignore files select
+all addons. Each selected addon builds its complete index, including all
+supported architectures and libc variants.
 When adding a shared dependency, update both the trigger paths and the path
 selection in [image-matrix.yaml](workflows/image-matrix.yaml).
+
+## Verify an addon
+
+Before publishing a PR preview or a `main` build, the Linux jobs compare every
+addon variant with its checked-in `inventory.json`. Each path maps to `null` for
+a regular file or to a string for a symlink target. The `common` mapping applies
+to every variant. Entries in `variants` are keyed by architecture, with a libc
+suffix for libc-specific addons.
+
+CI uses the latest stable release of `openshell-build-image` to apply the
+freshly built index to each digest-pinned base in `verification.baseImages` on
+both architectures. It checks that the target filesystem contains the addon
+payload and that other base files match. It then runs `verification.commands`
+inside the target image with networking disabled.
+
+To refresh an inventory after an intentional payload change, build the addon
+index with [build-addon-index.sh](scripts/build-addon-index.sh) on Linux. For
+example, use the following commands for GitHub CLI and review the inventory
+diff before committing.
+
+```sh
+export IMAGE_NAME=localhost/addon-check-github-cli
+export BUILD_CONTEXT=.
+export VARIANTS_JSON='[{"containerfile":"addons/devtools/github-cli/Containerfile"}]'
+.github/scripts/build-addon-index.sh
+
+inventory=$(mktemp)
+bash .github/scripts/verify-addon.sh inventory "${IMAGE_NAME}:next" > "$inventory" &&
+  mv "$inventory" addons/devtools/github-cli/inventory.json
+```
+
+## Publish verified images
 
 After a successful PR check, a separate workflow publishes the image artifacts to
 `ghcr.io/<owner>/<repository>-<addon>/pr:<head-sha>`, including every architecture

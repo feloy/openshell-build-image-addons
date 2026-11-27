@@ -45,6 +45,18 @@ fields.
 `addon.yaml` is the source of truth for these fields. The Containerfiles and
 installers define how to build the image. See the [Codex metadata](addons/agents/codex/addon.yaml).
 
+The top-level `contents` mapping lists installed files, including executable
+symlinks, and directories containing bundled files. All paths are absolute
+inside the resulting container. Entries under `contents.variants` apply to the
+named libc variant in addition to the common paths.
+
+The top-level `verification` mapping describes how to check that the addon
+works in a container. Each entry in `verification.baseImages` gives a
+digest-pinned `image` reference and its `libc`. Apply the addon to a listed base
+image and run `verification.commands` inside the resulting container. Each
+command is an array with the executable path followed by its arguments.
+`verification.inventory` points to the exact file list used by CI.
+
 For the catalog's `image` field, use the published repository
 `ghcr.io/openkaiden/openshell-build-image-addons-<name>` followed by `@` and the
 digest of its OCI index. Consumers use that index to select their architecture

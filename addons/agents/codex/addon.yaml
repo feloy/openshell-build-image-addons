@@ -20,3 +20,24 @@ metadata:
   displayName: "Codex"
   description: "OpenAI Codex CLI with the Codex ACP adapter."
   version: "0.159.3"
+contents:
+  files:
+    - /usr/local/bin/codex
+    - /usr/local/bin/codex-acp
+  directories:
+    - /usr/local/lib/codex
+  variants:
+    musl:
+      files:
+        - /usr/local/lib/libgcc_s.so.1
+        - /usr/local/lib/libstdc++.so.6
+verification:
+  inventory: inventory.json
+  baseImages:
+    - image: registry.access.redhat.com/ubi10/ubi@sha256:87ceab8634a53a36c75a8ba7282f09f11c46ab3e8906db6c6d2b3cd2a7dc4f4e
+      libc: glibc
+    - image: docker.io/library/alpine@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+      libc: musl
+  commands:
+    - [/usr/local/bin/codex, --version]
+    - [/usr/local/bin/codex-acp, --version]

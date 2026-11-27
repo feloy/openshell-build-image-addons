@@ -1,0 +1,20 @@
+{
+  "common": {
+    "/usr/local/bin/claude": null,
+    "/usr/local/bin/claude-agent-acp": null
+  },
+  "variants": {
+    "amd64-glibc": {},
+    "amd64-musl": {
+      "/usr/local/lib/libgcc_s.so.1": null,
+      "/usr/local/lib/libstdc++.so.6": "libstdc++.so.6.0.34",
+      "/usr/local/lib/libstdc++.so.6.0.34": null
+    },
+    "arm64-glibc": {},
+    "arm64-musl": {
+      "/usr/local/lib/libgcc_s.so.1": null,
+      "/usr/local/lib/libstdc++.so.6": "libstdc++.so.6.0.34",
+      "/usr/local/lib/libstdc++.so.6.0.34": null
+    }
+  }
+}

@@ -20,3 +20,21 @@ metadata:
   displayName: "pnpm"
   description: "pnpm package manager native binary, with a pnpx launcher."
   version: "12.21.0"
+contents:
+  files:
+    - /usr/local/bin/pnpm
+    - /usr/local/bin/pnpx
+    - /usr/local/lib/pnpm/pnpm
+    - /usr/local/share/licenses/pnpm/LICENSE
+  directories:
+    - /usr/local/lib/pnpm/dist
+verification:
+  inventory: inventory.json
+  baseImages:
+    - image: registry.access.redhat.com/ubi10/ubi@sha256:87ceab8634a53a36c75a8ba7282f09f11c46ab3e8906db6c6d2b3cd2a7dc4f4e
+      libc: glibc
+    - image: docker.io/library/alpine@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6
+      libc: musl
+  commands:
+    - [/usr/local/bin/pnpm, --version]
+    - [/usr/local/bin/pnpx, --help]

@@ -52,4 +52,6 @@ jobs:
       image-suffix: ${{ matrix.image.suffix }}
       variants: ${{ toJSON(matrix.image.variants) }}
       context: ${{ matrix.image.context }}
+      manifest: ${{ matrix.image.manifest }}
+      builder: ${{ needs.images.outputs.builder }}
       push: true
