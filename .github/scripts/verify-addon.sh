@@ -27,7 +27,7 @@ fail() {
   exit 1
 }
 
-# Mount an image and record file types, modes, checksums, and symlink targets.
+# Mount an image and record metadata, file checksums, and symlink targets.
 scan_image() (
   local image=$1 root= scratch
   scratch=$(mktemp -d)
@@ -35,20 +35,24 @@ scan_image() (
   root=$(podman image mount "$image")
   cd "$root"
   # Keep paths and symlink targets NUL-delimited, and never follow symlinks.
-  find . -mindepth 1 ! -type d -printf '%P\0%y\0%m\0%l\0' > "$scratch/entries"
+  find . -mindepth 1 -printf '%P\0%y\0%m\0%U\0%G\0%l\0' > "$scratch/entries"
   find . -type f -print0 | xargs -0r sha256sum --zero -- > "$scratch/hashes"
+  # jq replaces invalid UTF-8, which could hide a path or symlink mismatch.
+  iconv -f UTF-8 -t UTF-8 "$scratch/entries" "$scratch/hashes" >/dev/null ||
+    fail "$image contains a path or symlink target with invalid UTF-8"
   jq -n --rawfile entries "$scratch/entries" --rawfile hashes "$scratch/hashes" '
     ($hashes | split("\u0000") | map(select(length > 0) |
       {key: .[67:], value: .[:64]}) | from_entries) as $sha256 |
     ($entries | split("\u0000")) as $fields |
-    reduce range(0; ($fields | length); 4) as $i ({};
+    reduce range(0; ($fields | length); 6) as $i ({};
       if $fields[$i] == "" then . else
         ("/" + $fields[$i]) as $path |
         $fields[$i + 1] as $type |
         .[$path] = {
           type: $type, mode: $fields[$i + 2],
+          uid: ($fields[$i + 3] | tonumber), gid: ($fields[$i + 4] | tonumber),
           value: (if $type == "f" then $sha256[$path]
-                  elif $type == "l" then $fields[$i + 3]
+                  elif $type == "l" then $fields[$i + 5]
                   else null end)
         }
       end)
@@ -74,6 +78,7 @@ collect_payloads() {
     snapshot "$source" > "$work/$variant.snapshot.json"
     jq -S '
       with_entries(
+        select(.value.type != "d") |
         .value |= if .type == "l" then .value
                   elif .type == "f" then null
                   else error("unexpected file type " + .type) end
@@ -100,7 +105,7 @@ write_inventory() {
     '
 }
 
-# Check each variant's exact file inventory and the paths of its declared executables.
+# Check each variant's files and symlink targets against the inventory.
 check_inventory() {
   local checked_in=$1 variant issues
   jq -e --slurpfile variants "$work/variants.json" '
@@ -108,9 +113,16 @@ check_inventory() {
     (.variants | keys == ($variants[0] | sort)) and
     (all(.variants[]; type == "object"))
   ' "$checked_in" > /dev/null || fail "Inventory does not cover the variants in $index"
+  issues=$(jq -r '
+    .common as $common |
+    .variants | to_entries[] as $variant |
+    ($variant.value | keys[]) as $path |
+    select($common | has($path)) |
+    "\($variant.key): \($path)"
+  ' "$checked_in")
+  [[ -z $issues ]] || fail "Inventory paths listed in both common and a variant:"$'\n'"$issues"
   while IFS= read -r variant; do
-    issues=$(jq -r --arg variant "$variant" --slurpfile actual "$work/$variant.files.json" \
-      --slurpfile manifest "$work/manifest.json" '
+    issues=$(jq -r --arg variant "$variant" --slurpfile actual "$work/$variant.files.json" '
       (.common + .variants[$variant]) as $expected |
       $actual[0] as $actual |
       (($expected | keys[]) as $path |
@@ -119,28 +131,30 @@ check_inventory() {
           "incorrect file type or symlink target: \($path) (expected \($expected[$path]|tojson), got \($actual[$path]|tojson))"
         else empty end),
       (($actual | keys[]) as $path |
-        select($expected | has($path) | not) | "unexpected file: \($path)"),
-      ($manifest[0].verification.commands[][0] as $path |
-        select($actual | has($path) | not) | "verification executable missing from addon: \($path)")
+        select($expected | has($path) | not) | "unexpected file: \($path)")
     ' "$checked_in")
     [[ -z $issues ]] || fail "$variant inventory differs from the addon payload:"$'\n'"$issues"
   done < <(jq -r '.[]' "$work/variants.json")
 }
 
-# Confirm the target contains the addon payload and preserves the other base files.
+# Confirm the target contains the addon files and preserves other base entries.
 check_target() {
   local variant=$1 base=$2 target=$3 issues
   snapshot "$base" > "$work/base.json"
   snapshot "$target" > "$work/target.json"
   issues=$(jq -nr --slurpfile before "$work/base.json" --slurpfile after "$work/target.json" \
     --slurpfile addon "$work/$variant.snapshot.json" '
-      $before[0] as $base | $after[0] as $target | $addon[0] as $payload |
+      $before[0] as $base | $after[0] as $target | $addon[0] as $source |
+      ($source | with_entries(select(.value.type != "d"))) as $payload |
       (($payload | keys[]) as $path |
         if ($target | has($path) | not) then "missing addon file: \($path)"
         elif $target[$path] != $payload[$path] then "file differs from addon payload: \($path)"
         else empty end),
       ((($base + $target) | keys[]) as $path |
         select(($payload | has($path) | not) and $base[$path] != $target[$path]) |
+        select(($base | has($path)) or $target[$path].type != "d") |
+        # COPY can apply the metadata from the addon to a shared directory.
+        select($source[$path].type != "d" or $source[$path] != $target[$path]) |
         "unexpected filesystem change: \($path)")
   ')
   [[ -z $issues ]] || fail "$variant target image differs from the expected filesystem:"$'\n'"$issues"

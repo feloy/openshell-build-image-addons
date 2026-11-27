@@ -41,28 +41,35 @@ Before publishing a PR preview or a `main` build, the Linux jobs compare every
 addon variant with its checked-in `inventory.json`. Each path maps to `null` for
 a regular file or to a string for a symlink target. The `common` mapping applies
 to every variant. Entries in `variants` are keyed by architecture, with a libc
-suffix for libc-specific addons.
+suffix for libc-specific addons. Declare each path either in `common` or in the
+applicable variants. Paths and symlink targets use UTF-8.
 
 CI uses the latest stable release of `openshell-build-image` to apply the
 freshly built index to each digest-pinned base in `verification.baseImages` on
 both architectures. It checks that the target filesystem contains the addon
-payload and that other base files match. It then runs `verification.commands`
-inside the target image with networking disabled.
+payload and that other base entries match. For directories in both the base and
+addon, the target may retain either source's ownership and permissions. CI then
+runs `verification.commands` inside the target image with networking disabled.
 
 To refresh an inventory after an intentional payload change, build the addon
 index with [build-addon-index.sh](scripts/build-addon-index.sh) on Linux. For
 example, use the following commands for GitHub CLI and review the inventory
 diff before committing.
 
-```sh
-export IMAGE_NAME=localhost/addon-check-github-cli
-export BUILD_CONTEXT=.
-export VARIANTS_JSON='[{"containerfile":"addons/devtools/github-cli/Containerfile"}]'
-.github/scripts/build-addon-index.sh
+```bash
+(
+  set -e
+  work=$(mktemp -d)
+  trap 'rm -rf -- "$work"' EXIT
+  run_id=${work##*/}
+  export IMAGE_NAME="localhost/addon-check-github-cli-${run_id,,}"
+  export BUILD_CONTEXT=.
+  export VARIANTS_JSON='[{"containerfile":"addons/devtools/github-cli/Containerfile"}]'
 
-inventory=$(mktemp)
-bash .github/scripts/verify-addon.sh inventory "${IMAGE_NAME}:next" > "$inventory" &&
-  mv "$inventory" addons/devtools/github-cli/inventory.json
+  .github/scripts/build-addon-index.sh
+  bash .github/scripts/verify-addon.sh inventory "${IMAGE_NAME}:next" > "$work/inventory.json"
+  mv "$work/inventory.json" addons/devtools/github-cli/inventory.json
+)
 ```
 
 ## Publish verified images
@@ -102,6 +109,8 @@ env:
 ```
 
 Remove an entry to disable it, or add an entry to discover another variant.
+When the set of variants changes, update `verification.baseImages` and regenerate
+`inventory.json` for each affected addon.
 For each configured libc, discovery looks for
 `addons/<category>/<addon>/Containerfile.<libc>`.
 The default configuration builds these descriptors for a libc-specific addon:
@@ -135,10 +144,10 @@ single libc.
 The build context is the repository root, so each Containerfile can copy shared
 helpers from `scripts/` and its own installer from
 `addons/<category>/<addon>/`. For example, the Codex Containerfiles use
-`COPY addons/agents/codex/install.sh /tmp/install-agent.sh`. Add a directory with
-its Containerfiles and installer under any category to enable a new addon
-automatically in both workflows. Add an `addon.yaml` in the same directory so
-catalogs can discover it. [Addon catalog metadata](../README.md#addon-catalog-metadata)
+`COPY addons/agents/codex/install.sh /tmp/install-agent.sh`. For a new addon,
+place its Containerfiles, installer, and [addon.yaml](../README.md#addon-catalog-metadata)
+under a category. Include the `verification` block in `addon.yaml` and check in
+the [generated inventory](#verify-an-addon) beside it.
 
 The presence of `Containerfile.<libc>` declares support for that libc. Variants
 without a Containerfile are skipped with a notice. Each addon builds
